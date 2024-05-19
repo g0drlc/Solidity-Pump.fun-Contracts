@@ -2,6 +2,8 @@
 
 pragma solidity ^0.8.24;
 
+import "./ERC20.sol";
+
 contract Pair {
     receive() external payable {}
 
@@ -30,32 +32,39 @@ contract Pair {
         _tokenB = token1;
     }
 
-    event Mint(uint256 amount0, uint256 amount1, address lp);
+    event Mint(uint256 reserve0, uint256 reserve1, address lp);
 
-    event Burn();
+    event Burn(uint256 reserve0, uint256 reserve1, address lp);
 
-    event Swap();
+    event Swap(uint256 amount0In, uint256 amount0Out, uint256 amount1In, uint256 amount1Out);
 
-    function mint(uint256 amount0, uint256 amount1, address _lp) public returns (bool) {
+    function mint(uint256 reserve0, uint256 reserve1, address _lp) public returns (bool) {
         lp = _lp;
 
-        pool = Pool({
-            reserve0: amount0,
-            reserve1: amount1,
-            k: amount0 * amount1,
-            lastUpdated: block.timestamp
-        });
-
-        return true;
-    }
-
-    function swap(uint256 reserve0, uint256 reserve1) public returns (bool) {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
             k: reserve0 * reserve1,
             lastUpdated: block.timestamp
         });
+
+        emit Mint(reserve0, reserve1, _lp);
+
+        return true;
+    }
+
+    function swap(uint256 amount0In, uint256 amount0Out, uint256 amount1In, uint256 amount1Out) public returns (bool) {
+        uint256 _reserve0 = pool.reserve0 + amount0In - amount0Out;
+        uint256 _reserve1 = pool.reserve1 + amount1In - amount1Out;
+
+        pool = Pool({
+            reserve0: _reserve0,
+            reserve1: _reserve1,
+            k: _reserve0 * _reserve1,
+            lastUpdated: block.timestamp
+        });
+
+        emit Swap(amount0In, amount0Out, amount1In, amount1Out);
 
         return true;
     }
@@ -69,6 +78,16 @@ contract Pair {
             k: reserve0 * reserve1,
             lastUpdated: block.timestamp
         });
+
+        emit Burn(reserve0, reserve1, _lp);
+
+        return true;
+    }
+
+    function approval(address _user, address _token, uint256 amount) public returns (bool) {
+        ERC20 token_ = ERC20(_token);
+
+        token_.approve(_user, amount);
 
         return true;
     }

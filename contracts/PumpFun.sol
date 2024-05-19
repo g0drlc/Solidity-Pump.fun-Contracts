@@ -16,8 +16,18 @@ contract PumpFun {
 
     Router private router;
 
+    address private _feeTo;
+
+    uint256 private fee;
+
+    uint private refFee;
+
+    uint private lpFee;
+
     struct Profile {
         address user;
+        address referree;
+        address[] referrals;
         Token[] tokens;
     }
 
@@ -45,12 +55,24 @@ contract PumpFun {
 
     event Launched(address indexed token, address indexed pair, uint);
 
-    constructor(address factory_, address router_) {
+    constructor(address factory_, address router_, address fees_wallet, uint256 _fee, uint _refFee, uint _lpFee) {
         owner = msg.sender;
 
         factory = Factory(factory_);
 
         router = Router(router_);
+
+        _feeTo = fees_wallet;
+
+        fee = _fee * 1 ether;
+
+        require(_refFee <= 5, "Referral Fee cannot exceed 5%.");
+
+        require(_lpFee <= 5, "Liquidity Fee cannot exceed 5%.");
+
+        refFee = _refFee;
+
+        lpFee = _lpFee;
     }
 
     modifier onlyOwner {
@@ -59,11 +81,15 @@ contract PumpFun {
         _;
     }
 
-    function createUserProfile(address _user) private returns (bool) {
+    function createUserProfile(address _user, address ref) private returns (bool) {
         Token[] memory _tokens;
+
+        address[] memory _referrals;
 
         Profile memory _profile = Profile({
             user: _user,
+            referree: ref,
+            referrals: _referrals,
             tokens: _tokens
         });
 
@@ -94,7 +120,39 @@ contract PumpFun {
         return true;
     }
 
-    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx) public payable returns (address, address, uint) {
+    function launchFee() public view returns (uint256) {
+        return fee;
+    }
+
+    function updateLaunchFee(uint256 _fee) public returns (uint256) {
+        fee = _fee;
+
+        return _fee;
+    }
+
+    function referralFee() public view returns (uint256) {
+        return refFee;
+    }
+
+    function updateReferralFee(uint256 _fee) public returns (uint256) {
+        refFee = _fee;
+
+        return _fee;
+    }
+
+    function liquidityFee() public view returns (uint256) {
+        return lpFee;
+    }
+
+    function updateLiquidityFee(uint256 _fee) public returns (uint256) {
+        lpFee = _fee;
+
+        return _fee;
+    }
+
+    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable returns (address, address, uint) {
+        require(msg.value >= fee, "Insufficient amount sent.");
+
         ERC20 _token = new ERC20(_name, _ticker, _supply, maxTx);
 
         address weth = router.WETH();
@@ -102,9 +160,31 @@ contract PumpFun {
         address _pair = factory.createPair(address(_token), weth);
 
         bool approved = approval(address(router), address(_token), _supply * 10 ** _token.decimals());
+        require(approved);
 
-        if(approved) {
-            router.addLiquidityETH(address(_token), _supply * 10 ** _token.decimals());
+        uint256 liquidity = (lpFee * msg.value) / 100;
+        uint256 value = msg.value - liquidity;
+
+        router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
+
+        Profile storage _profile = profile[msg.sender];
+
+        if(_profile.referree != address(0)) {
+            (bool os, ) = payable(_feeTo).call{value: value}("");
+            require(os);
+        } else {
+            Profile storage profile_ = profile[_profile.referree];
+
+            profile_.referrals.push(msg.sender);
+
+            uint256 refAmount = (refFee * value) / 100;
+            uint256 amount = value - refAmount;
+
+            (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
+            require(os);
+
+            (bool os1, ) = payable(_feeTo).call{value: amount}("");
+            require(os1);
         }
 
         Token memory token_ = Token({
@@ -128,14 +208,11 @@ contract PumpFun {
         bool exists = checkIfProfileExists(msg.sender);
 
         if(exists) {
-            Profile storage _profile = profile[msg.sender];
-
             _profile.tokens.push(token_);
         } else {
-            bool created = createUserProfile(msg.sender);
+            bool created = createUserProfile(msg.sender, ref);
 
             if(created) {
-                Profile storage _profile = profile[msg.sender];
 
                 _profile.tokens.push(token_);   
             }
@@ -146,5 +223,13 @@ contract PumpFun {
         emit Launched(address(_token), _pair, n);
 
         return (address(_token), _pair, n);
+    }
+
+    function feeTo() public view onlyOwner returns (address) {
+        return _feeTo;
+    }
+
+    function feeToSetter() public view returns (address) {
+        return owner;
     }
 }

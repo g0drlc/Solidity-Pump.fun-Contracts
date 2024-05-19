@@ -7,16 +7,18 @@ import "./Pair.sol";
 contract Factory {
     address private owner;
 
-    address private fees_wallet;
+    address private _feeTo;
 
     mapping (address => mapping (address => address)) private pair;
 
     address[] private pairs;
 
-    constructor(address fee_wallet) {
+    uint private constant fee = 5;
+
+    constructor(address fees_wallet) {
         owner = msg.sender;
 
-        fees_wallet = fee_wallet;
+        _feeTo = fees_wallet;
     }
 
     modifier onlyOwner {
@@ -55,10 +57,14 @@ contract Factory {
     }
 
     function feeTo() public view onlyOwner returns (address) {
-        return fees_wallet;
+        return _feeTo;
     }
 
     function feeToSetter() public view returns (address) {
         return owner;
+    }
+
+    function txFee() public pure returns (uint) {
+        return fee;
     }
 }

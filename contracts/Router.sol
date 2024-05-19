@@ -34,7 +34,7 @@ contract Router {
         return os;
     }
 
-    function getAmountsOut(address token, uint256 amountIn) public view returns (uint256 reserve0, uint256 reserve1, uint256 _amountOut) {
+    function getAmountsOut(address token, uint256 amountIn) public view returns (uint256 _amountOut) {
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -45,23 +45,23 @@ contract Router {
 
         uint256 k = reserveA.mul(reserveB);
 
+        uint256 amountOut;
+
         if(token == _WETH) {
             uint256 newReserveB = reserveB.add(amountIn);
 
             uint256 newReserveA = k.div(newReserveB);
 
-            uint256 amountOut = newReserveA.sub(reserveA);
-
-            return (newReserveA, newReserveB, amountOut);
+            amountOut = newReserveA.sub(reserveA);
         } else {
             uint256 newReserveA = reserveA.add(amountIn);
 
             uint256 newReserveB = k.div(newReserveA);
 
-            uint256 amountOut = newReserveB.sub(reserveB);
-
-            return (newReserveA, newReserveB, amountOut);
+            amountOut = newReserveB.sub(reserveB);
         }
+
+        return amountOut;
     }
 
     function addLiquidityETH(address token, uint256 amountToken) public payable returns (uint256, uint256) {
@@ -76,14 +76,12 @@ contract Router {
         ERC20 token_ = ERC20(token);
 
         bool os = transferETH(pair, amountETH);
+        require(os);
 
-        if(os) {
-            bool os1 = token_.transferFrom(msg.sender, pair, amountToken);
-
-            if(os1) {
-                _pair.mint(amountToken, amountETH, msg.sender);
-            }
-        }
+        bool os1 = token_.transferFrom(msg.sender, pair, amountToken);
+        require(os1);
+        
+        _pair.mint(amountToken, amountETH, msg.sender);
 
         return (amountToken, amountETH);
     }
@@ -104,19 +102,17 @@ contract Router {
         uint256 amountToken = (liquidity * reserveA) / 100;
 
         bool os = transferETH(to, amountETH);
+        require(os);
 
-        if(os) {
-            bool os1 = token_.transferFrom(pair, to, amountToken);
-
-            if(os1) {
-                _pair.burn(amountToken, amountETH, msg.sender);
-            }
-        }
+        bool os1 = token_.transferFrom(pair, to, amountToken);
+        require(os1);
+        
+        _pair.burn(amountToken, amountETH, msg.sender);
 
         return (amountToken, amountETH);
     }
 
-    function swapTokensForETH(uint256 amountIn, address token, address to) public returns  (uint256, uint256) {
+    function swapTokensForETH(uint256 amountIn, address token, address to) public returns (uint256, uint256) {
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -125,17 +121,24 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
-        (uint256 reserve0, uint256 reserve1, uint256 amountOut) = getAmountsOut(token, amountIn);
+        uint256 amountOut = getAmountsOut(token, amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
+        require(os);
 
-        if(os) {
-            bool os1 = transferETH(to, amountOut);
+        uint fee = factory_.txFee();
+        uint256 _amount = (fee * amountOut) / 100;
+        uint256 amount = amountOut - _amount;
 
-            if(os1) {
-                _pair.swap(reserve0, reserve1);
-            }
-        }
+        address feeTo = factory_.feeTo();
+
+        bool os1 = transferETH(to, amount);
+        require(os1);
+
+        bool os2 = transferETH(feeTo, _amount);
+        require(os2);
+
+        _pair.swap(amountIn, 0, 0, amountOut);
 
         return (amountIn, amountOut);
     }
@@ -151,17 +154,24 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
-        (uint256 reserve0, uint256 reserve1, uint256 amountOut) = getAmountsOut(_WETH, amountIn);
+        uint256 amountOut = getAmountsOut(_WETH, amountIn);
 
-        bool os = transferETH(pair, amountIn);
+        uint fee = factory_.txFee();
+        uint256 _amount = (fee * amountIn) / 100;
+        uint256 amount = amountIn - _amount;
 
-        if(os) {
-            bool os1 = token_.transferFrom(pair, to, amountOut);
+        address feeTo = factory_.feeTo();
 
-            if(os1) {
-                _pair.swap(reserve0, reserve1);
-            }
-        }
+        bool os = transferETH(pair, amount);
+        require(os);
+
+        bool os1 = transferETH(feeTo, _amount);
+        require(os1);
+
+        bool os2 = token_.transferFrom(pair, to, amountOut);
+        require(os2);
+    
+        _pair.swap(0, amountOut, amountIn, 0);
 
         return (amountIn, amountOut);
     }

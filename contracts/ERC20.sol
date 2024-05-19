@@ -120,6 +120,8 @@ contract ERC20 is Context, IERC20, Ownable {
 
         _tTotal = supply * 10 ** _decimals;
 
+        require(_maxTx <= 5, "Max Transaction cannot exceed 5%.");
+
         maxTx = _maxTx;
 
         _balances[_msgSender()] = _tTotal;
