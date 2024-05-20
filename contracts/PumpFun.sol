@@ -66,7 +66,7 @@ contract PumpFun {
 
         _feeTo = fees_wallet;
 
-        fee = _fee * 1 ether;
+        fee = (_fee * 1 ether) / 1000;
 
         require(_refFee <= 5, "Referral Fee cannot exceed 5%.");
 
