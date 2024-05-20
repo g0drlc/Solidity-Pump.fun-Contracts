@@ -239,7 +239,7 @@ contract PumpFun {
         return (address(_token), _pair, n);
     }
 
-    function deploy() public returns (uint256) {
-        
+    function deploy() public pure returns (uint256) {
+        return 0;
     }
 }
