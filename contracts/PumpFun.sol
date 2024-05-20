@@ -47,13 +47,13 @@ contract PumpFun {
         string website;
     }
 
-    mapping (address => Profile) private profile;
+    mapping (address => Profile) public profile;
 
-    Profile[] private profiles;
+    Profile[] public profiles;
 
-    mapping (address => Token) private token;
+    mapping (address => Token) public token;
 
-    Token[] private tokens;
+    Token[] public tokens;
 
     event Launched(address indexed token, address indexed pair, uint);
 
