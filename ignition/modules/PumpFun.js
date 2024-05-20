@@ -1,7 +1,7 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
 module.exports = buildModule("LockModule", (m) => {
-  const pump_fun = m.contract("PumpFun", ["0x30F403646134F53A5E31a4082b96b3F1e76e8745", "0x9Bd79d55bDfb5d816A2F2D0B5a93526C084c8654", "0x6627f8ddc81057368F9717042E38E3DEcb68dAc3", 5, 5, 5]);
+  const pump_fun = m.contract("PumpFun", ["0x27120eDaF483B1ca39435c2a54B06fD17C4e2735", "0xa4f90909992a327C8623661B3f29dE35A2802342", "0x6627f8ddc81057368F9717042E38E3DEcb68dAc3", 5, 5, 5]);
 
   return { pump_fun };
 });

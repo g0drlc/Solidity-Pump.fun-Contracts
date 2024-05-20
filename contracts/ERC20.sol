@@ -193,7 +193,7 @@ contract ERC20 is Context, IERC20, Ownable {
 
         uint256 maxTxAmount = (maxTx * _tTotal) / 100;
 
-        if(!isExcludedFromMaxTx[from] || !isExcludedFromMaxTx[to]) {
+        if(!isExcludedFromMaxTx[from]) {
             require(amount <= maxTxAmount, "Exceeds the MaxTxAmount.");
         }
        
