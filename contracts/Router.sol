@@ -76,10 +76,10 @@ contract Router {
         ERC20 token_ = ERC20(token);
 
         bool os = transferETH(pair, amountETH);
-        require(os);
+        require(os, "Transfer of ETH failed.");
 
         bool os1 = token_.transferFrom(msg.sender, pair, amountToken);
-        require(os1);
+        require(os1, "Transfer of token failed.");
         
         _pair.mint(amountToken, amountETH, msg.sender);
 
@@ -97,18 +97,18 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
-        // bool approved = _pair.approval(address(this), token, token_.balanceOf(pair));
-        // require(approved);
-
         uint256 amountETH = (liquidity * reserveB) / 100;
 
         uint256 amountToken = (liquidity * reserveA) / 100;
 
+        bool approved = _pair.approval(address(this), token, amountToken);
+        require(approved);
+
         bool os = transferETH(to, amountETH);
-        require(os);
+        require(os, "Transfer of ETH failed.");
 
         bool os1 = token_.transferFrom(pair, to, amountToken);
-        require(os1);
+        require(os1, "Transfer of token failed.");
         
         _pair.burn(amountToken, amountETH, msg.sender);
 
@@ -127,7 +127,7 @@ contract Router {
         uint256 amountOut = getAmountsOut(token, amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
-        require(os);
+        require(os, "Transfer of token failed");
 
         uint fee = factory_.txFee();
         uint256 _amount = (fee * amountOut) / 100;
@@ -136,10 +136,10 @@ contract Router {
         address feeTo = factory_.feeTo();
 
         bool os1 = transferETH(to, amount);
-        require(os1);
+        require(os1, "Transfer of ETH failed.");
 
         bool os2 = transferETH(feeTo, _amount);
-        require(os2);
+        require(os2, "Transfer of ETH failed.");
 
         _pair.swap(amountIn, 0, 0, amountOut);
 
@@ -160,7 +160,7 @@ contract Router {
         uint256 amountOut = getAmountsOut(_WETH, amountIn);
 
         bool approved = _pair.approval(address(this), token, amountOut);
-        require(approved);
+        require(approved, "Not Approved.");
 
         uint fee = factory_.txFee();
         uint256 _amount = (fee * amountIn) / 100;
@@ -169,13 +169,13 @@ contract Router {
         address feeTo = factory_.feeTo();
 
         bool os = transferETH(pair, amount);
-        require(os);
+        require(os, "Transfer of ETH failed.");
 
         bool os1 = transferETH(feeTo, _amount);
-        require(os1);
+        require(os1, "Transfer of ETH failed.");
 
         bool os2 = token_.transferFrom(pair, to, amountOut);
-        require(os2);
+        require(os2, "Transfer of token failed.");
     
         _pair.swap(0, amountOut, amountIn, 0);
 
