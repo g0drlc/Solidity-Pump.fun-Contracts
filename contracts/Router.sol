@@ -97,6 +97,9 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
+        // bool approved = _pair.approval(address(this), token, token_.balanceOf(pair));
+        // require(approved);
+
         uint256 amountETH = (liquidity * reserveB) / 100;
 
         uint256 amountToken = (liquidity * reserveA) / 100;
@@ -155,6 +158,9 @@ contract Router {
         ERC20 token_ = ERC20(token);
 
         uint256 amountOut = getAmountsOut(_WETH, amountIn);
+
+        bool approved = _pair.approval(address(this), token, amountOut);
+        require(approved);
 
         uint fee = factory_.txFee();
         uint256 _amount = (fee * amountIn) / 100;

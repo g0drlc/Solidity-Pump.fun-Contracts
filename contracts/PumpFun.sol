@@ -24,6 +24,8 @@ contract PumpFun {
 
     uint private lpFee;
 
+    uint256 private constant mcap = 100_000 ether;
+
     struct Profile {
         address user;
         address referree;
@@ -150,6 +152,18 @@ contract PumpFun {
         return _fee;
     }
 
+    function feeTo() public view onlyOwner returns (address) {
+        return _feeTo;
+    }
+
+    function feeToSetter() public view returns (address) {
+        return owner;
+    }
+
+    function marketCap() public pure returns (uint256) {
+        return mcap;
+    }
+
     function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
@@ -225,11 +239,7 @@ contract PumpFun {
         return (address(_token), _pair, n);
     }
 
-    function feeTo() public view onlyOwner returns (address) {
-        return _feeTo;
-    }
-
-    function feeToSetter() public view returns (address) {
-        return owner;
+    function deploy() public returns (uint256) {
+        
     }
 }
