@@ -173,13 +173,19 @@ contract PumpFun {
 
         address _pair = factory.createPair(address(_token), weth);
 
-        bool approved = approval(address(router), address(_token), _supply * 10 ** _token.decimals());
+        uint256 amount_ = (50 * _supply) / 100;
+        uint256 _amount = (50 * _supply) / 100;
+
+        bool _os = _token.transfer(msg.sender, amount_ * 10 ** _token.decimals());
+        require(_os);
+
+        bool approved = approval(address(router), address(_token), _amount * 10 ** _token.decimals());
         require(approved);
 
         uint256 liquidity = (lpFee * msg.value) / 100;
         uint256 value = msg.value - liquidity;
 
-        router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
+        router.addLiquidityETH{value: liquidity}(address(_token), _amount * 10 ** _token.decimals());
 
         Profile storage _profile = profile[msg.sender];
 
