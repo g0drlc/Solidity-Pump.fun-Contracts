@@ -12,8 +12,6 @@ contract PumpFun {
 
     Factory private factory;
 
-    Pair private pair;
-
     Router private router;
 
     address private _feeTo;
@@ -45,6 +43,7 @@ contract PumpFun {
         string telegram;
         string youtube;
         string website;
+        bool trading;
     }
 
     mapping (address => Profile) public profile;
@@ -56,6 +55,8 @@ contract PumpFun {
     Token[] public tokens;
 
     event Launched(address indexed token, address indexed pair, uint);
+
+    event Deployed(address indexed token, uint256 amount0, uint256 amount1);
 
     constructor(address factory_, address router_, address fees_wallet, uint256 _fee, uint _refFee, uint _lpFee) {
         owner = msg.sender;
@@ -218,7 +219,8 @@ contract PumpFun {
             twitter: urls[0],
             telegram: urls[1],
             youtube: urls[2],
-            website: urls[3]
+            website: urls[3],
+            trading: true
         });
 
         token[address(_token)] = token_;
@@ -245,7 +247,13 @@ contract PumpFun {
         return (address(_token), _pair, n);
     }
 
-    function deploy() public pure returns (uint256) {
-        return 0;
+    function deploy(address token_) public onlyOwner {
+        Token storage _token = token[token_];
+
+        _token.trading = false;
+
+        (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(token_, 100, owner);
+
+        emit Deployed(token_, amount0, amount1);
     }
 }

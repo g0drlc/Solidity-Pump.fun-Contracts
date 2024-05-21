@@ -56,7 +56,7 @@ contract Factory {
         return pairs.length;
     }
 
-    function feeTo() public view onlyOwner returns (address) {
+    function feeTo() public view returns (address) {
         return _feeTo;
     }
 

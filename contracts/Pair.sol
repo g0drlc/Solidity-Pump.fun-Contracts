@@ -52,8 +52,8 @@ contract Pair {
     }
 
     function swap(uint256 amount0In, uint256 amount0Out, uint256 amount1In, uint256 amount1Out) public returns (bool) {
-        uint256 _reserve0 = pool.reserve0 + amount0In - amount0Out;
-        uint256 _reserve1 = pool.reserve1 + amount1In - amount1Out;
+        uint256 _reserve0 = (pool.reserve0 + amount0In) - amount0Out;
+        uint256 _reserve1 = (pool.reserve1 + amount1In) - amount1Out;
 
         pool = Pool({
             reserve0: _reserve0,
