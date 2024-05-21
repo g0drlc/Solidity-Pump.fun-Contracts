@@ -121,10 +121,10 @@ contract Pair {
     }
 
     function priceALast() public view returns (uint256) {
-        return (pool.k / pool.reserve1);
+        return (pool.reserve1 / pool.reserve0);
     }
 
     function priceBLast() public view returns (uint256) {
-        return (pool.k / pool.reserve0);
+        return (pool.reserve0 / pool.reserve1);
     }
 }

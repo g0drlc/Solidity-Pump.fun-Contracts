@@ -52,13 +52,13 @@ contract Router {
 
             uint256 newReserveA = k.div(newReserveB);
 
-            amountOut = newReserveA.sub(reserveA);
+            amountOut = reserveA.sub(newReserveA);
         } else {
             uint256 newReserveA = reserveA.add(amountIn);
 
             uint256 newReserveB = k.div(newReserveA);
 
-            amountOut = newReserveB.sub(reserveB);
+            amountOut = reserveB.sub(newReserveB);
         }
 
         return amountOut;
