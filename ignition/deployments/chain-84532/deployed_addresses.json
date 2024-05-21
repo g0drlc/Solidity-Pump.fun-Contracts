@@ -1,3 +1,5 @@
 {
-  "LockModule#PumpFun": "0x1Fa1553C59b1D99cEe4B2F14BF505EC821385771"
+  "LockModule#Factory": "0xbD59103a294Fb5958e34Cb93D4fCFe0D4bA531eA",
+  "LockModule#Router": "0x3446e89a9Aa7CCA4d8CD3b08c253727c31fE5243",
+  "LockModule#PumpFun": "0x3b7Ce9ed4B77af60A030F0f4633B5cF722d0Ed3c"
 }
