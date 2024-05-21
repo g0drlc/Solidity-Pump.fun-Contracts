@@ -190,7 +190,7 @@ contract PumpFun {
 
         Profile storage _profile = profile[msg.sender];
 
-        if(_profile.referree != address(0)) {
+        if(_profile.referree == address(0)) {
             (bool os, ) = payable(_feeTo).call{value: value}("");
             require(os);
         } else {
