@@ -53,7 +53,7 @@ module.exports = {
     timeout: 40000
   },
   etherscan: {
-    apiKey: ETHERSCAN_API_KEY
+    apiKey: BASE_API_KEY
   },
   sourcify: {
     enabled: true

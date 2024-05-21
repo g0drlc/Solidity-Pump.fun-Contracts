@@ -18,7 +18,6 @@ contract Pair {
     struct Pool {
         uint256 reserve0;
         uint256 reserve1;
-        uint256 k;
         uint256 lastUpdated;
     }
 
@@ -44,7 +43,6 @@ contract Pair {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
-            k: reserve0 * reserve1,
             lastUpdated: block.timestamp
         });
 
@@ -60,7 +58,6 @@ contract Pair {
         pool = Pool({
             reserve0: _reserve0,
             reserve1: _reserve1,
-            k: _reserve0 * _reserve1,
             lastUpdated: block.timestamp
         });
 
@@ -75,7 +72,6 @@ contract Pair {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
-            k: reserve0 * reserve1,
             lastUpdated: block.timestamp
         });
 
@@ -116,15 +112,15 @@ contract Pair {
         return (pool.reserve0, pool.reserve1, pool.lastUpdated);
     }
 
-    function kLast() public view returns (uint256) {
-        return pool.k;
+    function kLast() public view returns (uint256, uint256) {
+        return (pool.reserve0, pool.reserve1);
     }
 
-    function priceALast() public view returns (uint256) {
-        return (pool.reserve1 / pool.reserve0);
+    function priceALast() public view returns (uint256, uint256) {
+        return (pool.reserve1, pool.reserve0);
     }
 
-    function priceBLast() public view returns (uint256) {
-        return (pool.reserve0 / pool.reserve1);
+    function priceBLast() public view returns (uint256, uint256) {
+        return (pool.reserve0, pool.reserve1);
     }
 }

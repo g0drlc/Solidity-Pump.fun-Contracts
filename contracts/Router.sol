@@ -7,8 +7,6 @@ import "./Pair.sol";
 import "./ERC20.sol";
 
 contract Router {
-    using SafeMath for uint256;
-
     address private _factory;
 
     address private _WETH;
@@ -43,22 +41,22 @@ contract Router {
 
         (uint256 reserveA, uint256 reserveB, ) = _pair.getReserves();
 
-        uint256 k = reserveA.mul(reserveB);
+        uint256 k = reserveA * reserveB;
 
         uint256 amountOut;
 
         if(token == _WETH) {
-            uint256 newReserveB = reserveB.add(amountIn);
+            uint256 newReserveB = reserveB + amountIn;
 
-            uint256 newReserveA = k.div(newReserveB);
+            uint256 newReserveA = k / newReserveB;
 
-            amountOut = reserveA.sub(newReserveA);
+            amountOut = reserveA - newReserveA;
         } else {
-            uint256 newReserveA = reserveA.add(amountIn);
+            uint256 newReserveA = reserveA + amountIn;
 
-            uint256 newReserveB = k.div(newReserveA);
+            uint256 newReserveB = k / newReserveA;
 
-            amountOut = reserveB.sub(newReserveB);
+            amountOut = reserveB - newReserveB;
         }
 
         return amountOut;
