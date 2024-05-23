@@ -86,7 +86,7 @@ contract Router {
         return (amountToken, amountETH);
     }
 
-    function removeLiquidityETH(address token, uint256 liquidity, address to) public payable returns (uint256, uint256) {
+    function removeLiquidityETH(address token, uint256 liquidity, address to) public returns (uint256, uint256) {
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);

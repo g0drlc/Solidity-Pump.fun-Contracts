@@ -203,11 +203,15 @@ contract ERC20 is Context, IERC20, Ownable {
         emit Transfer(from, to, amount);
     }
 
-    function updateMaxTx(uint256 _maxTx) external onlyOwner {
+    function updateMaxTx(uint256 _maxTx) public onlyOwner {
         require(_maxTx <= 5, "Max Transaction cannot exceed 5%.");
 
         maxTx = _maxTx;
 
         emit MaxTxUpdated(_maxTx);
+    }
+
+    function excludeFromMaxTx(address user) public onlyOwner {
+        isExcludedFromMaxTx[user] = true;
     }
 }

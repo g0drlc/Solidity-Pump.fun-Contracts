@@ -20,7 +20,7 @@ contract PumpFun {
 
     uint private refFee;
 
-    uint private lpFee;
+    uint private constant lpFee = 5;
 
     uint256 private constant mcap = 100_000 ether;
 
@@ -58,7 +58,7 @@ contract PumpFun {
 
     event Deployed(address indexed token, uint256 amount0, uint256 amount1);
 
-    constructor(address factory_, address router_, address fees_wallet, uint256 _fee, uint _refFee, uint _lpFee) {
+    constructor(address factory_, address router_, address fees_wallet, uint256 _fee, uint _refFee) {
         owner = msg.sender;
 
         factory = Factory(factory_);
@@ -71,11 +71,7 @@ contract PumpFun {
 
         require(_refFee <= 5, "Referral Fee cannot exceed 5%.");
 
-        require(_lpFee <= 5, "Liquidity Fee cannot exceed 5%.");
-
         refFee = _refFee;
-
-        lpFee = _lpFee;
     }
 
     modifier onlyOwner {
@@ -143,14 +139,8 @@ contract PumpFun {
         return _fee;
     }
 
-    function liquidityFee() public view returns (uint256) {
+    function liquidityFee() public pure returns (uint256) {
         return lpFee;
-    }
-
-    function updateLiquidityFee(uint256 _fee) public returns (uint256) {
-        lpFee = _fee;
-
-        return _fee;
     }
 
     function feeTo() public view onlyOwner returns (address) {
@@ -161,7 +151,7 @@ contract PumpFun {
         return owner;
     }
 
-    function marketCap() public pure returns (uint256) {
+    function marketCapLimit() public pure returns (uint256) {
         return mcap;
     }
 
@@ -174,39 +164,15 @@ contract PumpFun {
 
         address _pair = factory.createPair(address(_token), weth);
 
-        uint256 amount_ = (50 * _supply) / 100;
-        uint256 _amount = (50 * _supply) / 100;
+        _token.excludeFromMaxTx(_pair);
 
-        bool _os = _token.transfer(msg.sender, amount_ * 10 ** _token.decimals());
-        require(_os);
-
-        bool approved = approval(address(router), address(_token), _amount * 10 ** _token.decimals());
+        bool approved = approval(address(router), address(_token), _supply * 10 ** _token.decimals());
         require(approved);
 
         uint256 liquidity = (lpFee * msg.value) / 100;
         uint256 value = msg.value - liquidity;
 
-        router.addLiquidityETH{value: liquidity}(address(_token), _amount * 10 ** _token.decimals());
-
-        Profile storage _profile = profile[msg.sender];
-
-        if(_profile.referree == address(0)) {
-            (bool os, ) = payable(_feeTo).call{value: value}("");
-            require(os);
-        } else {
-            Profile storage profile_ = profile[_profile.referree];
-
-            profile_.referrals.push(msg.sender);
-
-            uint256 refAmount = (refFee * value) / 100;
-            uint256 amount = value - refAmount;
-
-            (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
-            require(os);
-
-            (bool os1, ) = payable(_feeTo).call{value: amount}("");
-            require(os1);
-        }
+        router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
 
         Token memory token_ = Token({
             pair: _pair,
@@ -230,13 +196,52 @@ contract PumpFun {
         bool exists = checkIfProfileExists(msg.sender);
 
         if(exists) {
+            Profile storage _profile = profile[msg.sender];
+
+            if(_profile.referree == address(0)) {
+                (bool os, ) = payable(_feeTo).call{value: value}("");
+                require(os);
+            } else {
+                Profile storage profile_ = profile[_profile.referree];
+
+                profile_.referrals.push(msg.sender);
+
+                uint256 refAmount = (refFee * value) / 100;
+                uint256 amount = value - refAmount;
+
+                (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
+                require(os);
+
+                (bool os1, ) = payable(_feeTo).call{value: amount}("");
+                require(os1);
+            }
+
             _profile.tokens.push(token_);
         } else {
             bool created = createUserProfile(msg.sender, ref);
 
             if(created) {
+                Profile storage _profile = profile[msg.sender];
 
-                _profile.tokens.push(token_);   
+                if(_profile.referree == address(0)) {
+                    (bool os, ) = payable(_feeTo).call{value: value}("");
+                    require(os);
+                } else {
+                    Profile storage profile_ = profile[_profile.referree];
+
+                    profile_.referrals.push(msg.sender);
+
+                    uint256 refAmount = (refFee * value) / 100;
+                    uint256 amount = value - refAmount;
+
+                    (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
+                    require(os);
+
+                    (bool os1, ) = payable(_feeTo).call{value: amount}("");
+                    require(os1);
+                }
+
+                _profile.tokens.push(token_);
             }
         }
 
