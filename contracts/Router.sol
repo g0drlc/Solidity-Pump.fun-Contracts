@@ -34,7 +34,7 @@ contract Router {
         return os;
     }
 
-    function getAmountsOut(address token, uint256 amountIn) public view returns (uint256 _amountOut) {
+    function getAmountsOut(address token, address weth, uint256 amountIn) public view returns (uint256 _amountOut) {
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -47,7 +47,7 @@ contract Router {
 
         uint256 amountOut;
 
-        if(token == _WETH) {
+        if(weth == _WETH) {
             uint256 newReserveB = reserveB.add(amountIn);
 
             uint256 newReserveA = k.div(newReserveB, "Division failed");
@@ -124,7 +124,7 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
-        uint256 amountOut = getAmountsOut(token, amountIn);
+        uint256 amountOut = getAmountsOut(token, address(0), amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
         require(os, "Transfer of token failed");
@@ -157,7 +157,7 @@ contract Router {
 
         ERC20 token_ = ERC20(token);
 
-        uint256 amountOut = getAmountsOut(_WETH, amountIn);
+        uint256 amountOut = getAmountsOut(token, _WETH, amountIn);
 
         bool approved = _pair.approval(address(this), token, amountOut);
         require(approved, "Not Approved.");
