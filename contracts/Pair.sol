@@ -88,6 +88,13 @@ contract Pair {
         return true;
     }
 
+    function transferETH(address _address, uint256 amount) public returns (bool) {
+        (bool os, ) = payable(_address).call{value: amount}("");
+        require(os, "Transfer ETH Failed.");
+
+        return os;
+    }
+
     function liquidityProvider() public view returns (address) {
         return lp;
     }

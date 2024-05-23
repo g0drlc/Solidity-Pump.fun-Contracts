@@ -29,7 +29,7 @@ contract Router {
 
     function transferETH(address _address, uint256 amount) private returns (bool) {
         (bool os, ) = payable(_address).call{value: amount}("");
-        require(os);
+        require(os, "Transfer ETH Failed.");
 
         return os;
     }
@@ -104,7 +104,7 @@ contract Router {
         bool approved = _pair.approval(address(this), token, amountToken);
         require(approved);
 
-        bool os = transferETH(to, amountETH);
+        bool os = _pair.transferETH(to, amountETH);
         require(os, "Transfer of ETH failed.");
 
         bool os1 = token_.transferFrom(pair, to, amountToken);
@@ -135,10 +135,10 @@ contract Router {
 
         address feeTo = factory_.feeTo();
 
-        bool os1 = transferETH(to, amount);
+        bool os1 = _pair.transferETH(to, amount);
         require(os1, "Transfer of ETH failed.");
 
-        bool os2 = transferETH(feeTo, _amount);
+        bool os2 = _pair.transferETH(feeTo, _amount);
         require(os2, "Transfer of ETH failed.");
 
         _pair.swap(amountIn, 0, 0, amountOut);
