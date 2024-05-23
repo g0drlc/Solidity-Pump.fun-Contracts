@@ -141,9 +141,9 @@ contract Router {
         bool os2 = _pair.transferETH(feeTo, _amount);
         require(os2, "Transfer of ETH failed.");
 
-        _pair.swap(amountIn, 0, 0, amountOut);
+        _pair.swap(amountIn, 0, 0, amount);
 
-        return (amountIn, amountOut);
+        return (amountIn, amount);
     }
 
     function swapETHForTokens(address token, address to) public payable returns (uint256, uint256) {
@@ -177,8 +177,8 @@ contract Router {
         bool os2 = token_.transferFrom(pair, to, amountOut);
         require(os2, "Transfer of token failed.");
     
-        _pair.swap(0, amountOut, amountIn, 0);
+        _pair.swap(0, amountOut, amount, 0);
 
-        return (amountIn, amountOut);
+        return (amount, amountOut);
     }
 }

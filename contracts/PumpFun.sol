@@ -164,8 +164,6 @@ contract PumpFun {
 
         address _pair = factory.createPair(address(_token), weth);
 
-        _token.excludeFromMaxTx(_pair);
-
         bool approved = approval(address(router), address(_token), _supply * 10 ** _token.decimals());
         require(approved);
 
@@ -254,6 +252,8 @@ contract PumpFun {
 
     function deploy(address token_) public onlyOwner {
         Token storage _token = token[token_];
+
+        // _token.excludeFromMaxTx(_pair);
 
         _token.trading = false;
 
