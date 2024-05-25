@@ -41,7 +41,7 @@ contract Router is ReentrancyGuard {
         return os;
     }
 
-    function getAmountsOut(address token, address weth, uint256 amountIn) public nonReentrant returns (uint256 _amountOut) {
+    function _getAmountsOut(address token, address weth, uint256 amountIn) private view returns (uint256 _amountOut) {
         require(token != address(0), "Zero addresses are not allowed.");
 
         Factory factory_ = Factory(_factory);
@@ -73,10 +73,14 @@ contract Router is ReentrancyGuard {
         return amountOut;
     }
 
-    function addLiquidityETH(address token, uint256 amountToken) public payable nonReentrant returns (uint256, uint256) {
-        require(token != address(0), "Zero addresses are not allowed.");
+    function getAmountsOut(address token, address weth, uint256 amountIn) external nonReentrant returns (uint256 _amountOut) {
+        uint256 amountOut = _getAmountsOut(token, weth, amountIn);
 
-        uint256 amountETH = msg.value;
+        return amountOut;
+    }
+
+    function _addLiquidityETH(address token, uint256 amountToken, uint256 amountETH) private returns (uint256, uint256) {
+        require(token != address(0), "Zero addresses are not allowed.");
 
         Factory factory_ = Factory(_factory);
 
@@ -97,7 +101,15 @@ contract Router is ReentrancyGuard {
         return (amountToken, amountETH);
     }
 
-    function removeLiquidityETH(address token, uint256 liquidity, address to) public nonReentrant returns (uint256, uint256) {
+    function addLiquidityETH(address token, uint256 amountToken) external payable nonReentrant returns (uint256, uint256) {
+        uint256 amountETH = msg.value;
+
+        (uint256 amount0, uint256 amount1) = _addLiquidityETH(token, amountToken, amountETH);
+        
+        return (amount0, amount1);
+    }
+
+    function _removeLiquidityETH(address token, uint256 liquidity, address to) private returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
 
@@ -129,6 +141,12 @@ contract Router is ReentrancyGuard {
         return (amountToken, amountETH);
     }
 
+    function removeLiquidityETH(address token, uint256 liquidity, address to) external nonReentrant returns (uint256, uint256) {
+        (uint256 amountToken, uint256 amountETH) = _removeLiquidityETH(token, liquidity, to);
+
+        return (amountToken, amountETH);
+    }
+
     function swapTokensForETH(uint256 amountIn, address token, address to) public nonReentrant returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
@@ -141,7 +159,7 @@ contract Router is ReentrancyGuard {
 
         ERC20 token_ = ERC20(token);
 
-        uint256 amountOut = getAmountsOut(token, address(0), amountIn);
+        uint256 amountOut = _getAmountsOut(token, address(0), amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
         require(os, "Transfer of token failed");
@@ -177,7 +195,7 @@ contract Router is ReentrancyGuard {
 
         ERC20 token_ = ERC20(token);
 
-        uint256 amountOut = getAmountsOut(token, _WETH, amountIn);
+        uint256 amountOut = _getAmountsOut(token, _WETH, amountIn);
 
         bool approved = _pair.approval(address(this), token, amountOut);
         require(approved, "Not Approved.");

@@ -33,7 +33,7 @@ contract Factory is ReentrancyGuard {
 
     event PairCreated(address indexed tokenA, address indexed tokenB, address pair, uint);
 
-    function createPair(address tokenA, address tokenB) public nonReentrant returns (address) {
+    function _createPair(address tokenA, address tokenB) private returns (address) {
         require(tokenA != address(0), "Zero addresses are not allowed.");
         require(tokenB != address(0), "Zero addresses are not allowed.");
 
@@ -49,6 +49,12 @@ contract Factory is ReentrancyGuard {
         emit PairCreated(tokenA, tokenB, address(_pair), n);
 
         return address(_pair);
+    }
+
+    function createPair(address tokenA, address tokenB) external nonReentrant returns (address) {
+        address _pair = _createPair(tokenA, tokenB);
+
+        return _pair;
     }
 
     function getPair(address tokenA, address tokenB) public view returns (address) {

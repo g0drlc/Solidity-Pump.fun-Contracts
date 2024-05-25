@@ -122,7 +122,7 @@ contract PumpFun is ReentrancyGuard {
         return exists;
     }
 
-    function approval(address _user, address _token, uint256 amount) public nonReentrant returns (bool) {
+    function _approval(address _user, address _token, uint256 amount) private returns (bool) {
         require(_user != address(0), "Zero addresses are not allowed.");
         require(_token != address(0), "Zero addresses are not allowed.");
 
@@ -131,6 +131,12 @@ contract PumpFun is ReentrancyGuard {
         token_.approve(_user, amount);
 
         return true;
+    }
+
+    function approval(address _user, address _token, uint256 amount) external nonReentrant returns (bool) {
+        bool approved = _approval(_user, _token, amount);
+
+        return approved;
     }
 
     function launchFee() public view returns (uint256) {
@@ -184,7 +190,7 @@ contract PumpFun is ReentrancyGuard {
 
         address _pair = factory.createPair(address(_token), weth);
 
-        bool approved = approval(address(router), address(_token), _supply * 10 ** _token.decimals());
+        bool approved = _approval(address(router), address(_token), _supply * 10 ** _token.decimals());
         require(approved);
 
         uint256 liquidity = (lpFee * msg.value) / 100;

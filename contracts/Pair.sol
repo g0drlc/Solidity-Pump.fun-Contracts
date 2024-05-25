@@ -87,7 +87,7 @@ contract Pair is ReentrancyGuard {
         return true;
     }
 
-    function approval(address _user, address _token, uint256 amount) public nonReentrant returns (bool) {
+    function _approval(address _user, address _token, uint256 amount) private returns (bool) {
         require(_user != address(0), "Zero addresses are not allowed.");
         require(_token != address(0), "Zero addresses are not allowed.");
 
@@ -96,6 +96,12 @@ contract Pair is ReentrancyGuard {
         token_.approve(_user, amount);
 
         return true;
+    }
+
+    function approval(address _user, address _token, uint256 amount) external nonReentrant returns (bool) {
+        bool approved = _approval(_user, _token, amount);
+
+        return approved;
     }
 
     function transferETH(address _address, uint256 amount) public returns (bool) {
