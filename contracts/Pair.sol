@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import "./ERC20.sol";
 
-contract Pair {
+contract Pair is ReentrancyGuard {
     receive() external payable {}
 
     address private _factory;
@@ -24,6 +26,10 @@ contract Pair {
     Pool private pool;
 
     constructor(address factory_, address token0, address token1) {
+        require(factory_ != address(0), "Zero addresses are not allowed.");
+        require(token0 != address(0), "Zero addresses are not allowed.");
+        require(token1 != address(0), "Zero addresses are not allowed.");
+
         _factory = factory_;
 
         _tokenA = token0;
@@ -67,6 +73,7 @@ contract Pair {
     }
 
     function burn(uint256 reserve0, uint256 reserve1, address _lp) public returns (bool) {
+        require(_lp != address(0), "Zero addresses are not allowed.");
         require(lp == _lp, "Only Lp holders can call this function.");
 
         pool = Pool({
@@ -80,7 +87,10 @@ contract Pair {
         return true;
     }
 
-    function approval(address _user, address _token, uint256 amount) public returns (bool) {
+    function approval(address _user, address _token, uint256 amount) public nonReentrant returns (bool) {
+        require(_user != address(0), "Zero addresses are not allowed.");
+        require(_token != address(0), "Zero addresses are not allowed.");
+
         ERC20 token_ = ERC20(_token);
 
         token_.approve(_user, amount);
@@ -89,6 +99,8 @@ contract Pair {
     }
 
     function transferETH(address _address, uint256 amount) public returns (bool) {
+        require(_address != address(0), "Zero addresses are not allowed.");
+
         (bool os, ) = payable(_address).call{value: amount}("");
         require(os, "Transfer ETH Failed.");
 

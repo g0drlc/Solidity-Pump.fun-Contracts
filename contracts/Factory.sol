@@ -2,9 +2,11 @@
 
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import "./Pair.sol";
 
-contract Factory {
+contract Factory is ReentrancyGuard {
     address private owner;
 
     address private _feeTo;
@@ -15,10 +17,12 @@ contract Factory {
 
     uint private constant fee = 5;
 
-    constructor(address fees_wallet) {
+    constructor(address fee_to) {
         owner = msg.sender;
 
-        _feeTo = fees_wallet;
+        require(fee_to != address(0), "Zero addresses are not allowed.");
+
+        _feeTo = fee_to;
     }
 
     modifier onlyOwner {
@@ -29,7 +33,10 @@ contract Factory {
 
     event PairCreated(address indexed tokenA, address indexed tokenB, address pair, uint);
 
-    function createPair(address tokenA, address tokenB) public returns (address) {
+    function createPair(address tokenA, address tokenB) public nonReentrant returns (address) {
+        require(tokenA != address(0), "Zero addresses are not allowed.");
+        require(tokenB != address(0), "Zero addresses are not allowed.");
+
         Pair _pair = new Pair(address(this), tokenA, tokenB);
 
         pair[tokenA][tokenB] = address(_pair);
@@ -62,6 +69,12 @@ contract Factory {
 
     function feeToSetter() public view returns (address) {
         return owner;
+    }
+
+    function setFeeTo(address fee_to) public onlyOwner{
+        require(fee_to != address(0), "Zero addresses are not allowed.");
+
+        _feeTo = fee_to;
     }
 
     function txFee() public pure returns (uint) {

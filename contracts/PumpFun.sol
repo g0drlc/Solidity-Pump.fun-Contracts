@@ -2,12 +2,14 @@
 
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import "./Factory.sol";
 import "./Pair.sol";
 import "./Router.sol";
 import "./ERC20.sol";
 
-contract PumpFun {
+contract PumpFun is ReentrancyGuard {
     address private owner;
 
     Factory private factory;
@@ -44,6 +46,7 @@ contract PumpFun {
         string youtube;
         string website;
         bool trading;
+        bool tradingOnUniswap;
     }
 
     mapping (address => Profile) public profile;
@@ -58,14 +61,18 @@ contract PumpFun {
 
     event Deployed(address indexed token, uint256 amount0, uint256 amount1);
 
-    constructor(address factory_, address router_, address fees_wallet, uint256 _fee, uint _refFee) {
+    constructor(address factory_, address router_, address fee_to, uint256 _fee, uint _refFee) {
         owner = msg.sender;
 
+        require(factory_ != address(0), "Zero addresses are not allowed.");
+        require(router_ != address(0), "Zero addresses are not allowed.");
+        require(fee_to != address(0), "Zero addresses are not allowed.");
+    
         factory = Factory(factory_);
 
         router = Router(router_);
 
-        _feeTo = fees_wallet;
+        _feeTo = fee_to;
 
         fee = (_fee * 1 ether) / 1000;
 
@@ -81,6 +88,8 @@ contract PumpFun {
     }
 
     function createUserProfile(address _user, address ref) private returns (bool) {
+        require(_user != address(0), "Zero addresses are not allowed.");
+
         Token[] memory _tokens;
 
         address[] memory _referrals;
@@ -100,6 +109,8 @@ contract PumpFun {
     }
 
     function checkIfProfileExists(address _user) private view returns (bool) {
+        require(_user != address(0), "Zero addresses are not allowed.");
+
         bool exists = false;
 
         for(uint i = 0; i < profiles.length; i++) {
@@ -111,7 +122,10 @@ contract PumpFun {
         return exists;
     }
 
-    function approval(address _user, address _token, uint256 amount) public returns (bool) {
+    function approval(address _user, address _token, uint256 amount) public nonReentrant returns (bool) {
+        require(_user != address(0), "Zero addresses are not allowed.");
+        require(_token != address(0), "Zero addresses are not allowed.");
+
         ERC20 token_ = ERC20(_token);
 
         token_.approve(_user, amount);
@@ -143,7 +157,7 @@ contract PumpFun {
         return lpFee;
     }
 
-    function feeTo() public view onlyOwner returns (address) {
+    function feeTo() public view returns (address) {
         return _feeTo;
     }
 
@@ -151,11 +165,17 @@ contract PumpFun {
         return owner;
     }
 
+    function setFeeTo(address fee_to) public onlyOwner{
+        require(fee_to != address(0), "Zero addresses are not allowed.");
+
+        _feeTo = fee_to;
+    }
+
     function marketCapLimit() public pure returns (uint256) {
         return mcap;
     }
 
-    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable returns (address, address, uint) {
+    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
         ERC20 _token = new ERC20(_name, _ticker, _supply, maxTx);
@@ -184,7 +204,8 @@ contract PumpFun {
             telegram: urls[1],
             youtube: urls[2],
             website: urls[3],
-            trading: true
+            trading: true,
+            tradingOnUniswap: false
         });
 
         token[address(_token)] = token_;
@@ -250,15 +271,46 @@ contract PumpFun {
         return (address(_token), _pair, n);
     }
 
-    function deploy(address token_) public onlyOwner {
-        Token storage _token = token[token_];
+    function deploy(address tk) public onlyOwner nonReentrant {
+        require(tk != address(0), "Zero addresses are not allowed.");
 
-        // _token.excludeFromMaxTx(_pair);
+        address weth = router.WETH();
+
+        address pair = factory.getPair(tk, weth);
+
+        ERC20 token_ = ERC20(tk);
+
+        token_.excludeFromMaxTx(pair);
+
+        Token storage _token = token[tk];
 
         _token.trading = false;
 
-        (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(token_, 100, owner);
+        (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(tk, 100, owner);
 
-        emit Deployed(token_, amount0, amount1);
+        emit Deployed(tk, amount0, amount1);
     }
+
+    // function openTrading() external onlyOwner {
+    //     require(!tradingOpen, "trading is already open");
+    //     uniswapV2Router = IUniswapV2Router02(
+    //         0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008
+    //     );
+    //     _approve(address(this), address(uniswapV2Router), _tTotal);
+    //     uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
+    //             address(this),
+    //             uniswapV2Router.WETH()
+    //         );
+    //     uniswapV2Router.addLiquidityETH{value: address(this).balance}(
+    //         address(this),
+    //         balanceOf(address(this)),
+    //         0,
+    //         0,
+    //         owner(),
+    //         block.timestamp
+    //     );
+    //     IERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
+    //     swapEnabled = true;
+    //     tradingOpen = true;
+    // }
 }

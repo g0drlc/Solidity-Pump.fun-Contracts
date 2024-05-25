@@ -2,11 +2,13 @@
 
 pragma solidity ^0.8.24;
 
+import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+
 import "./Factory.sol";
 import "./Pair.sol";
 import "./ERC20.sol";
 
-contract Router {
+contract Router is ReentrancyGuard {
     using SafeMath for uint256;
 
     address private _factory;
@@ -14,6 +16,9 @@ contract Router {
     address private _WETH;
     
     constructor(address factory_, address weth) {
+        require(factory_ != address(0), "Zero addresses are not allowed.");
+        require(weth != address(0), "Zero addresses are not allowed.");
+
         _factory = factory_;
 
         _WETH = weth;
@@ -28,13 +33,17 @@ contract Router {
     }
 
     function transferETH(address _address, uint256 amount) private returns (bool) {
+        require(_address != address(0), "Zero addresses are not allowed.");
+
         (bool os, ) = payable(_address).call{value: amount}("");
         require(os, "Transfer ETH Failed.");
 
         return os;
     }
 
-    function getAmountsOut(address token, address weth, uint256 amountIn) public view returns (uint256 _amountOut) {
+    function getAmountsOut(address token, address weth, uint256 amountIn) public nonReentrant returns (uint256 _amountOut) {
+        require(token != address(0), "Zero addresses are not allowed.");
+
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -64,7 +73,9 @@ contract Router {
         return amountOut;
     }
 
-    function addLiquidityETH(address token, uint256 amountToken) public payable returns (uint256, uint256) {
+    function addLiquidityETH(address token, uint256 amountToken) public payable nonReentrant returns (uint256, uint256) {
+        require(token != address(0), "Zero addresses are not allowed.");
+
         uint256 amountETH = msg.value;
 
         Factory factory_ = Factory(_factory);
@@ -86,7 +97,10 @@ contract Router {
         return (amountToken, amountETH);
     }
 
-    function removeLiquidityETH(address token, uint256 liquidity, address to) public returns (uint256, uint256) {
+    function removeLiquidityETH(address token, uint256 liquidity, address to) public nonReentrant returns (uint256, uint256) {
+        require(token != address(0), "Zero addresses are not allowed.");
+        require(to != address(0), "Zero addresses are not allowed.");
+
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -115,7 +129,10 @@ contract Router {
         return (amountToken, amountETH);
     }
 
-    function swapTokensForETH(uint256 amountIn, address token, address to) public returns (uint256, uint256) {
+    function swapTokensForETH(uint256 amountIn, address token, address to) public nonReentrant returns (uint256, uint256) {
+        require(token != address(0), "Zero addresses are not allowed.");
+        require(to != address(0), "Zero addresses are not allowed.");
+
         Factory factory_ = Factory(_factory);
 
         address pair = factory_.getPair(token, _WETH);
@@ -146,7 +163,10 @@ contract Router {
         return (amountIn, amount);
     }
 
-    function swapETHForTokens(address token, address to) public payable returns (uint256, uint256) {
+    function swapETHForTokens(address token, address to) public payable nonReentrant returns (uint256, uint256) {
+        require(token != address(0), "Zero addresses are not allowed.");
+        require(to != address(0), "Zero addresses are not allowed.");
+
         uint256 amountIn = msg.value;
 
         Factory factory_ = Factory(_factory);

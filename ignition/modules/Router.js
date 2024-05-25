@@ -1,7 +1,7 @@
 const { buildModule } = require("@nomicfoundation/hardhat-ignition/modules");
 
 module.exports = buildModule("LockModule", (m) => {
-  const router = m.contract("Router", ["0x9Bd79d55bDfb5d816A2F2D0B5a93526C084c8654", "0x1BDD24840e119DC2602dCC587Dd182812427A5Cc"]);
+  const router = m.contract("Router", ["0x45166C7013f1df036cAd5Cb66225C5FA04775AC0", "0x1BDD24840e119DC2602dCC587Dd182812427A5Cc"]);
 
   return { router };
 });

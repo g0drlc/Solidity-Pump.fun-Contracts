@@ -212,6 +212,8 @@ contract ERC20 is Context, IERC20, Ownable {
     }
 
     function excludeFromMaxTx(address user) public onlyOwner {
+        require(user != address(0), "ERC20: Exclude Max Tx from the zero address");
+
         isExcludedFromMaxTx[user] = true;
     }
 }
