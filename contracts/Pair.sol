@@ -20,6 +20,7 @@ contract Pair is ReentrancyGuard {
     struct Pool {
         uint256 reserve0;
         uint256 reserve1;
+        uint256 k;
         uint256 lastUpdated;
     }
 
@@ -49,6 +50,7 @@ contract Pair is ReentrancyGuard {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
+            k: reserve0 * reserve1,
             lastUpdated: block.timestamp
         });
 
@@ -64,6 +66,7 @@ contract Pair is ReentrancyGuard {
         pool = Pool({
             reserve0: _reserve0,
             reserve1: _reserve1,
+            k: pool.k,
             lastUpdated: block.timestamp
         });
 
@@ -79,6 +82,7 @@ contract Pair is ReentrancyGuard {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
+            k: pool.k,
             lastUpdated: block.timestamp
         });
 
@@ -137,8 +141,8 @@ contract Pair is ReentrancyGuard {
         return (pool.reserve0, pool.reserve1, pool.lastUpdated);
     }
 
-    function kLast() public view returns (uint256, uint256) {
-        return (pool.reserve0, pool.reserve1);
+    function kLast() public view returns (uint256) {
+        return pool.k;
     }
 
     function priceALast() public view returns (uint256, uint256) {
@@ -147,5 +151,9 @@ contract Pair is ReentrancyGuard {
 
     function priceBLast() public view returns (uint256, uint256) {
         return (pool.reserve0, pool.reserve1);
+    }
+
+    function balance() public view returns (uint256) {
+        return address(this).balance;
     }
 }

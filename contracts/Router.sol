@@ -52,7 +52,7 @@ contract Router is ReentrancyGuard {
 
         (uint256 reserveA, uint256 reserveB, ) = _pair.getReserves();
 
-        uint256 k = reserveA.mul(reserveB);
+        uint256 k = _pair.kLast();
 
         uint256 amountOut;
 
@@ -119,11 +119,11 @@ contract Router is ReentrancyGuard {
 
         Pair _pair = Pair(payable(pair));
 
-        (uint256 reserveA, uint256 reserveB, ) = _pair.getReserves();
+        (uint256 reserveA, , ) = _pair.getReserves();
 
         ERC20 token_ = ERC20(token);
 
-        uint256 amountETH = (liquidity * reserveB) / 100;
+        uint256 amountETH  = (liquidity * _pair.balance()) / 100;
 
         uint256 amountToken = (liquidity * reserveA) / 100;
 

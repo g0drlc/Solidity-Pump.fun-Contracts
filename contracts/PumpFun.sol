@@ -9,6 +9,39 @@ import "./Pair.sol";
 import "./Router.sol";
 import "./ERC20.sol";
 
+interface IUniswapV2Factory {
+    function createPair(
+        address tokenA,
+        address tokenB
+    ) external returns (address pair);
+}
+
+interface IUniswapV2Router02 {
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(
+        uint amountIn,
+        uint amountOutMin,
+        address[] calldata path,
+        address to,
+        uint deadline
+    ) external;
+
+    function factory() external pure returns (address);
+
+    function WETH() external pure returns (address);
+
+    function addLiquidityETH(
+        address token,
+        uint amountTokenDesired,
+        uint amountTokenMin,
+        uint amountETHMin,
+        address to,
+        uint deadline
+    )
+        external
+        payable
+        returns (uint amountToken, uint amountETH, uint liquidity);
+}
+
 contract PumpFun is ReentrancyGuard {
     address private owner;
 
@@ -25,6 +58,8 @@ contract PumpFun is ReentrancyGuard {
     uint private constant lpFee = 5;
 
     uint256 private constant mcap = 100_000 ether;
+
+    IUniswapV2Router02 private uniswapV2Router;
 
     struct Profile {
         address user;
@@ -79,6 +114,8 @@ contract PumpFun is ReentrancyGuard {
         require(_refFee <= 5, "Referral Fee cannot exceed 5%.");
 
         refFee = _refFee;
+
+        uniswapV2Router = IUniswapV2Router02(0x1689E7B1F10000AE47eBfE339a4f69dECd19F602);
     }
 
     modifier onlyOwner {
@@ -290,33 +327,37 @@ contract PumpFun is ReentrancyGuard {
 
         Token storage _token = token[tk];
 
-        _token.trading = false;
-
         (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(tk, 100, owner);
+
+        _token.trading = false;
+        _token.tradingOnUniswap = true;
 
         emit Deployed(tk, amount0, amount1);
     }
 
-    // function openTrading() external onlyOwner {
-    //     require(!tradingOpen, "trading is already open");
-    //     uniswapV2Router = IUniswapV2Router02(
-    //         0xC532a74256D3Db42D0Bf7a0400fEFDbad7694008
-    //     );
-    //     _approve(address(this), address(uniswapV2Router), _tTotal);
-    //     uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(
-    //             address(this),
-    //             uniswapV2Router.WETH()
-    //         );
-    //     uniswapV2Router.addLiquidityETH{value: address(this).balance}(
-    //         address(this),
-    //         balanceOf(address(this)),
-    //         0,
-    //         0,
-    //         owner(),
-    //         block.timestamp
-    //     );
-    //     IERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
-    //     swapEnabled = true;
-    //     tradingOpen = true;
-    // }
+    function openTradingOnUniswap(address tk) private {
+        require(tk != address(0), "Zero addresses are not allowed.");
+
+        ERC20 token_ = ERC20(tk);
+
+        Token storage _token = token[tk];
+
+        require(_token.trading && !_token.tradingOnUniswap, "trading is already open");
+
+        bool approved = _approval(address(uniswapV2Router), tk, token_.balanceOf(address(this)));
+        require(approved, "Not approved.");
+
+        address uniswapV2Pair = IUniswapV2Factory(uniswapV2Router.factory()).createPair(tk, uniswapV2Router.WETH());
+
+        uniswapV2Router.addLiquidityETH{value: address(this).balance}(
+            tk,
+            token_.balanceOf(address(this)),
+            0,
+            0,
+            address(this),
+            block.timestamp
+        );
+
+        ERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
+    }
 }
