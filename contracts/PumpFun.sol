@@ -218,6 +218,22 @@ contract PumpFun is ReentrancyGuard {
         return mcap;
     }
 
+    function getUserTokens() public view returns (Token[] memory) {
+        require(checkIfProfileExists(msg.sender), "User Profile dose not exist.");
+
+        Profile memory _profile = profile[msg.sender];
+
+        return _profile.tokens;
+    }
+
+    function getUserReferrals() public view returns (address[] memory) {
+        require(checkIfProfileExists(msg.sender), "User Profile dose not exist.");
+        
+        Profile memory _profile = profile[msg.sender];
+
+        return _profile.referrals;
+    }
+
     function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
