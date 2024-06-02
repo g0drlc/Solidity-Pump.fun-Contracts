@@ -69,6 +69,7 @@ contract PumpFun is ReentrancyGuard {
     }
 
     struct Token {
+        address creator;
         address token;
         address pair;
         string name;
@@ -226,6 +227,10 @@ contract PumpFun is ReentrancyGuard {
         return _profile.tokens;
     }
 
+    function getTokens() public view returns (Token[] memory) {
+        return tokens;
+    }
+
     function getUserReferrals() public view returns (address[] memory) {
         require(checkIfProfileExists(msg.sender), "User Profile dose not exist.");
         
@@ -252,8 +257,9 @@ contract PumpFun is ReentrancyGuard {
         router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
 
         Token memory token_ = Token({
-            pair: _pair,
+            creator: msg.sender,
             token: address(_token),
+            pair: _pair,
             name: _name,
             ticker: _ticker,
             supply: _supply,

@@ -145,15 +145,29 @@ contract Pair is ReentrancyGuard {
         return pool.k;
     }
 
-    function priceALast() public view returns (uint256, uint256) {
-        return (pool.reserve1, pool.reserve0);
+    function priceALast() public view returns (uint256) {
+        return pool.reserve1 / pool.reserve0;
     }
 
-    function priceBLast() public view returns (uint256, uint256) {
-        return (pool.reserve0, pool.reserve1);
+    function priceBLast() public view returns (uint256) {
+        return pool.reserve0 / pool.reserve1;
     }
 
     function balance() public view returns (uint256) {
         return address(this).balance;
+    }
+
+    function liquidity(uint256 ethInUSD) public view returns (uint256) {
+        uint256 eth = pool.reserve1 ** 2;
+
+        uint256 liq = eth * ethInUSD;
+
+        return liq;
+    }
+
+    function marketCap(uint256 ethInUSD) public view returns (uint256) {
+        uint256 mCap = pool.reserve1 * ethInUSD;
+
+        return mCap;
     }
 }
