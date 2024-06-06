@@ -51,6 +51,8 @@ contract PumpFun is ReentrancyGuard {
 
     address private _feeTo;
 
+    uint256 private minMCap;
+
     uint256 private fee;
 
     uint private refFee;
@@ -75,12 +77,11 @@ contract PumpFun is ReentrancyGuard {
         string name;
         string ticker;
         uint256 supply;
+        uint256 mCap;
+        uint256 liquidity;
         string description;
         string image;
-        string twitter;
-        string telegram;
-        string youtube;
-        string website;
+        string[4] urls;
         bool trading;
         bool tradingOnUniswap;
     }
@@ -97,7 +98,7 @@ contract PumpFun is ReentrancyGuard {
 
     event Deployed(address indexed token, uint256 amount0, uint256 amount1);
 
-    constructor(address factory_, address router_, address fee_to, uint256 _fee, uint _refFee) {
+    constructor(address factory_, address router_, address fee_to, uint256 _fee, uint _refFee, uint256 min) {
         owner = msg.sender;
 
         require(factory_ != address(0), "Zero addresses are not allowed.");
@@ -116,7 +117,9 @@ contract PumpFun is ReentrancyGuard {
 
         refFee = _refFee;
 
-        uniswapV2Router = IUniswapV2Router02(0x1689E7B1F10000AE47eBfE339a4f69dECd19F602);
+        minMCap = min;
+
+        uniswapV2Router = IUniswapV2Router02(0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24);
     }
 
     modifier onlyOwner {
@@ -227,7 +230,35 @@ contract PumpFun is ReentrancyGuard {
         return _profile.tokens;
     }
 
-    function getTokens() public view returns (Token[] memory) {
+    function getTokenUrls(address tk) public view returns (string[4] memory) {
+        require(tk != address(0), "Zero addresses are not allowed.");
+
+        Token memory _token = token[tk];
+
+        return _token.urls;
+    }
+
+    function getTokens(uint256 ethInUSD) public returns (Token[] memory) {
+        for(uint i = 0; i < tokens.length; i++) {
+            Pair pair = Pair(payable(tokens[i].pair));
+            ERC20 tk = ERC20(tokens[i].token);
+
+            (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
+
+            Token storage _token = token[tokens[i].token];
+
+            if(reserve0 > 0) {
+                uint256 liq = ((reserve1 / 10 ** 18) * 2) * ethInUSD;
+                uint256 _mcap = ((tk.totalSupply() / 10 ** 18) * (reserve1 / reserve0) * ethInUSD) + minMCap;
+
+                _token.mCap = _mcap;
+                _token.liquidity = liq;
+
+                tokens[i].mCap = _mcap;
+                tokens[i].liquidity = liq;
+            }
+        }
+
         return tokens;
     }
 
@@ -239,7 +270,7 @@ contract PumpFun is ReentrancyGuard {
         return _profile.referrals;
     }
 
-    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable nonReentrant returns (address, address, uint) {
+    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref, uint256 ethInUSD) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
         ERC20 _token = new ERC20(_name, _ticker, _supply, maxTx);
@@ -256,6 +287,9 @@ contract PumpFun is ReentrancyGuard {
 
         router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
 
+        uint256 liq = ((liquidity / 10 ** 18) * 2) * ethInUSD;
+        uint256 _mcap = ((liquidity / 10 ** 18) * ethInUSD) + minMCap;
+
         Token memory token_ = Token({
             creator: msg.sender,
             token: address(_token),
@@ -263,12 +297,11 @@ contract PumpFun is ReentrancyGuard {
             name: _name,
             ticker: _ticker,
             supply: _supply,
+            mCap: _mcap,
+            liquidity: liq,
             description: desc,
             image: img,
-            twitter: urls[0],
-            telegram: urls[1],
-            youtube: urls[2],
-            website: urls[3],
+            urls: urls,
             trading: true,
             tradingOnUniswap: false
         });
@@ -349,7 +382,9 @@ contract PumpFun is ReentrancyGuard {
 
         Token storage _token = token[tk];
 
-        (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(tk, 100, owner);
+        (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(tk, 100, address(this));
+
+        openTradingOnUniswap(tk);
 
         _token.trading = false;
         _token.tradingOnUniswap = true;
@@ -381,5 +416,12 @@ contract PumpFun is ReentrancyGuard {
         );
 
         ERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
+    }
+
+    function withdraw() public returns (bool) {
+        (bool os, ) = payable(owner).call{value: address(this).balance}("");
+        require(os, "Transfer ETH Failed.");
+
+        return os;
     }
 }

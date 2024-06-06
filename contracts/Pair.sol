@@ -79,9 +79,12 @@ contract Pair is ReentrancyGuard {
         require(_lp != address(0), "Zero addresses are not allowed.");
         require(lp == _lp, "Only Lp holders can call this function.");
 
+        uint256 _reserve0 = pool.reserve0 - reserve0;
+        uint256 _reserve1 = pool.reserve1 - reserve1;
+
         pool = Pool({
-            reserve0: reserve0,
-            reserve1: reserve1,
+            reserve0: _reserve0,
+            reserve1: _reserve1,
             k: pool.k,
             lastUpdated: block.timestamp
         });
@@ -121,10 +124,6 @@ contract Pair is ReentrancyGuard {
         return lp;
     }
 
-    function MINIMUM_LIQUIDITY() public pure returns (uint) {
-        return 1000;
-    }
-
     function factory() public view returns (address) {
         return _factory;
     }
@@ -155,19 +154,5 @@ contract Pair is ReentrancyGuard {
 
     function balance() public view returns (uint256) {
         return address(this).balance;
-    }
-
-    function liquidity(uint256 ethInUSD) public view returns (uint256) {
-        uint256 eth = pool.reserve1 ** 2;
-
-        uint256 liq = eth * ethInUSD;
-
-        return liq;
-    }
-
-    function marketCap(uint256 ethInUSD) public view returns (uint256) {
-        uint256 mCap = pool.reserve1 * ethInUSD;
-
-        return mCap;
     }
 }
