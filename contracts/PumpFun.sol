@@ -43,6 +43,8 @@ interface IUniswapV2Router02 {
 }
 
 contract PumpFun is ReentrancyGuard {
+    receive() external payable {}
+    
     address private owner;
 
     Factory private factory;
@@ -77,11 +79,12 @@ contract PumpFun is ReentrancyGuard {
         string name;
         string ticker;
         uint256 supply;
-        uint256 mCap;
-        uint256 liquidity;
         string description;
         string image;
-        string[4] urls;
+        string twitter;
+        string telegram;
+        string youtube;
+        string website;
         bool trading;
         bool tradingOnUniswap;
     }
@@ -230,35 +233,7 @@ contract PumpFun is ReentrancyGuard {
         return _profile.tokens;
     }
 
-    function getTokenUrls(address tk) public view returns (string[4] memory) {
-        require(tk != address(0), "Zero addresses are not allowed.");
-
-        Token memory _token = token[tk];
-
-        return _token.urls;
-    }
-
-    function getTokens(uint256 ethInUSD) public returns (Token[] memory) {
-        for(uint i = 0; i < tokens.length; i++) {
-            Pair pair = Pair(payable(tokens[i].pair));
-            ERC20 tk = ERC20(tokens[i].token);
-
-            (uint256 reserve0, uint256 reserve1, ) = pair.getReserves();
-
-            Token storage _token = token[tokens[i].token];
-
-            if(reserve0 > 0) {
-                uint256 liq = ((reserve1 / 10 ** 18) * 2) * ethInUSD;
-                uint256 _mcap = ((tk.totalSupply() / 10 ** 18) * (reserve1 / reserve0) * ethInUSD) + minMCap;
-
-                _token.mCap = _mcap;
-                _token.liquidity = liq;
-
-                tokens[i].mCap = _mcap;
-                tokens[i].liquidity = liq;
-            }
-        }
-
+    function getTokens() public view returns (Token[] memory) {
         return tokens;
     }
 
@@ -270,7 +245,7 @@ contract PumpFun is ReentrancyGuard {
         return _profile.referrals;
     }
 
-    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref, uint256 ethInUSD) public payable nonReentrant returns (address, address, uint) {
+    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
         ERC20 _token = new ERC20(_name, _ticker, _supply, maxTx);
@@ -287,9 +262,6 @@ contract PumpFun is ReentrancyGuard {
 
         router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
 
-        uint256 liq = ((liquidity / 10 ** 18) * 2) * ethInUSD;
-        uint256 _mcap = ((liquidity / 10 ** 18) * ethInUSD) + minMCap;
-
         Token memory token_ = Token({
             creator: msg.sender,
             token: address(_token),
@@ -297,11 +269,12 @@ contract PumpFun is ReentrancyGuard {
             name: _name,
             ticker: _ticker,
             supply: _supply,
-            mCap: _mcap,
-            liquidity: liq,
             description: desc,
             image: img,
-            urls: urls,
+            twitter: urls[0],
+            telegram: urls[1],
+            youtube: urls[2],
+            website: urls[3],
             trading: true,
             tradingOnUniswap: false
         });
