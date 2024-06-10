@@ -14,14 +14,20 @@ contract Router is ReentrancyGuard {
     address private _factory;
 
     address private _WETH;
+
+    uint public referralFee;
     
-    constructor(address factory_, address weth) {
+    constructor(address factory_, address weth, uint refFee) {
         require(factory_ != address(0), "Zero addresses are not allowed.");
         require(weth != address(0), "Zero addresses are not allowed.");
 
         _factory = factory_;
 
         _WETH = weth;
+
+        require(refFee <= 5, "Referral Fee cannot exceed 5%.");
+
+        referralFee = refFee;
     }
 
     function factory() public view returns (address) {
@@ -50,14 +56,14 @@ contract Router is ReentrancyGuard {
 
         Pair _pair = Pair(payable(pair));
 
-        (uint256 reserveA, uint256 reserveB, ) = _pair.getReserves();
+        (uint256 reserveA, ,uint256 _reserveB) = _pair.getReserves();
 
         uint256 k = _pair.kLast();
 
         uint256 amountOut;
 
         if(weth == _WETH) {
-            uint256 newReserveB = reserveB.add(amountIn);
+            uint256 newReserveB = _reserveB.add(amountIn);
 
             uint256 newReserveA = k.div(newReserveB, "Division failed");
 
@@ -67,7 +73,7 @@ contract Router is ReentrancyGuard {
 
             uint256 newReserveB = k.div(newReserveA, "Division failed");
 
-            amountOut = reserveB.sub(newReserveB, "Subtraction failed.");
+            amountOut = _reserveB.sub(newReserveB, "Subtraction failed.");
         }
 
         return amountOut;
@@ -147,7 +153,7 @@ contract Router is ReentrancyGuard {
         return (amountToken, amountETH);
     }
 
-    function swapTokensForETH(uint256 amountIn, address token, address to) public nonReentrant returns (uint256, uint256) {
+    function swapTokensForETH(uint256 amountIn, address token, address to, address referree) public nonReentrant returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
 
@@ -165,23 +171,35 @@ contract Router is ReentrancyGuard {
         require(os, "Transfer of token failed");
 
         uint fee = factory_.txFee();
-        uint256 _amount = (fee * amountOut) / 100;
-        uint256 amount = amountOut - _amount;
+        uint256 txFee = (fee * amountOut) / 100;
+
+        uint256 _amount;
+        uint256 amount;
+
+        if(referree != address(0)) {
+            _amount = (referralFee * amountOut) / 100;
+            amount = amountOut - (txFee + _amount);
+
+            bool os1 = _pair.transferETH(referree, _amount);
+            require(os1, "Transfer of ETH failed.");
+        } else {
+            amount = amountOut - txFee;
+        }
 
         address feeTo = factory_.feeTo();
 
-        bool os1 = _pair.transferETH(to, amount);
-        require(os1, "Transfer of ETH failed.");
-
-        bool os2 = _pair.transferETH(feeTo, _amount);
+        bool os2 = _pair.transferETH(to, amount);
         require(os2, "Transfer of ETH failed.");
+
+        bool os3 = _pair.transferETH(feeTo, txFee);
+        require(os3, "Transfer of ETH failed.");
 
         _pair.swap(amountIn, 0, 0, amount);
 
         return (amountIn, amount);
     }
 
-    function swapETHForTokens(address token, address to) public payable nonReentrant returns (uint256, uint256) {
+    function swapETHForTokens(address token, address to, address referree) public payable nonReentrant returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
 
@@ -201,19 +219,31 @@ contract Router is ReentrancyGuard {
         require(approved, "Not Approved.");
 
         uint fee = factory_.txFee();
-        uint256 _amount = (fee * amountIn) / 100;
-        uint256 amount = amountIn - _amount;
+        uint256 txFee = (fee * amountOut) / 100;
+
+        uint256 _amount;
+        uint256 amount;
+
+        if(referree != address(0)) {
+            _amount = (referralFee * amountOut) / 100;
+            amount = amountOut - (txFee + _amount);
+
+            bool os = _pair.transferETH(referree, _amount);
+            require(os, "Transfer of ETH failed.");
+        } else {
+            amount = amountOut - txFee;
+        }
 
         address feeTo = factory_.feeTo();
 
-        bool os = transferETH(pair, amount);
-        require(os, "Transfer of ETH failed.");
-
-        bool os1 = transferETH(feeTo, _amount);
+        bool os1 = transferETH(pair, amount);
         require(os1, "Transfer of ETH failed.");
 
-        bool os2 = token_.transferFrom(pair, to, amountOut);
-        require(os2, "Transfer of token failed.");
+        bool os2 = transferETH(feeTo, _amount);
+        require(os2, "Transfer of ETH failed.");
+
+        bool os3 = token_.transferFrom(pair, to, amountOut);
+        require(os3, "Transfer of token failed.");
     
         _pair.swap(0, amountOut, amount, 0);
 

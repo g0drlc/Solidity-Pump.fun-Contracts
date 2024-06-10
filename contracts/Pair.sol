@@ -20,6 +20,7 @@ contract Pair is ReentrancyGuard {
     struct Pool {
         uint256 reserve0;
         uint256 reserve1;
+        uint256 _reserve1;
         uint256 k;
         uint256 lastUpdated;
     }
@@ -50,7 +51,8 @@ contract Pair is ReentrancyGuard {
         pool = Pool({
             reserve0: reserve0,
             reserve1: reserve1,
-            k: reserve0 * reserve1,
+            _reserve1: MINIMUM_LIQUIDITY(),
+            k: reserve0 * MINIMUM_LIQUIDITY(),
             lastUpdated: block.timestamp
         });
 
@@ -62,10 +64,12 @@ contract Pair is ReentrancyGuard {
     function swap(uint256 amount0In, uint256 amount0Out, uint256 amount1In, uint256 amount1Out) public returns (bool) {
         uint256 _reserve0 = (pool.reserve0 + amount0In) - amount0Out;
         uint256 _reserve1 = (pool.reserve1 + amount1In) - amount1Out;
+        uint256 reserve1_ = (pool._reserve1 + amount1In) - amount1Out;
 
         pool = Pool({
             reserve0: _reserve0,
             reserve1: _reserve1,
+            _reserve1: reserve1_,
             k: pool.k,
             lastUpdated: block.timestamp
         });
@@ -81,10 +85,12 @@ contract Pair is ReentrancyGuard {
 
         uint256 _reserve0 = pool.reserve0 - reserve0;
         uint256 _reserve1 = pool.reserve1 - reserve1;
+        uint256 reserve1_ = pool._reserve1 - reserve1;
 
         pool = Pool({
             reserve0: _reserve0,
             reserve1: _reserve1,
+            _reserve1: reserve1_,
             k: pool.k,
             lastUpdated: block.timestamp
         });
@@ -124,6 +130,10 @@ contract Pair is ReentrancyGuard {
         return lp;
     }
 
+    function MINIMUM_LIQUIDITY() public pure returns (uint256) {
+        return 1 ether;
+    }
+
     function factory() public view returns (address) {
         return _factory;
     }
@@ -136,8 +146,8 @@ contract Pair is ReentrancyGuard {
         return _tokenB;
     }
 
-    function getReserves() public view returns (uint256 reserveA, uint256 reserveB, uint256 timestamp) {
-        return (pool.reserve0, pool.reserve1, pool.lastUpdated);
+    function getReserves() public view returns (uint256, uint256, uint256) {
+        return (pool.reserve0, pool.reserve1, pool._reserve1);
     }
 
     function kLast() public view returns (uint256) {

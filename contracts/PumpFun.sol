@@ -53,11 +53,7 @@ contract PumpFun is ReentrancyGuard {
 
     address private _feeTo;
 
-    uint256 private minMCap;
-
     uint256 private fee;
-
-    uint private refFee;
 
     uint private constant lpFee = 5;
 
@@ -67,8 +63,6 @@ contract PumpFun is ReentrancyGuard {
 
     struct Profile {
         address user;
-        address referree;
-        address[] referrals;
         Token[] tokens;
     }
 
@@ -101,7 +95,7 @@ contract PumpFun is ReentrancyGuard {
 
     event Deployed(address indexed token, uint256 amount0, uint256 amount1);
 
-    constructor(address factory_, address router_, address fee_to, uint256 _fee, uint _refFee, uint256 min) {
+    constructor(address factory_, address router_, address fee_to, uint256 _fee) {
         owner = msg.sender;
 
         require(factory_ != address(0), "Zero addresses are not allowed.");
@@ -116,12 +110,6 @@ contract PumpFun is ReentrancyGuard {
 
         fee = (_fee * 1 ether) / 1000;
 
-        require(_refFee <= 5, "Referral Fee cannot exceed 5%.");
-
-        refFee = _refFee;
-
-        minMCap = min;
-
         uniswapV2Router = IUniswapV2Router02(0x4752ba5DBc23f44D87826276BF6Fd6b1C372aD24);
     }
 
@@ -131,17 +119,13 @@ contract PumpFun is ReentrancyGuard {
         _;
     }
 
-    function createUserProfile(address _user, address ref) private returns (bool) {
+    function createUserProfile(address _user) private returns (bool) {
         require(_user != address(0), "Zero addresses are not allowed.");
 
         Token[] memory _tokens;
 
-        address[] memory _referrals;
-
         Profile memory _profile = Profile({
             user: _user,
-            referree: ref,
-            referrals: _referrals,
             tokens: _tokens
         });
 
@@ -193,16 +177,6 @@ contract PumpFun is ReentrancyGuard {
         return _fee;
     }
 
-    function referralFee() public view returns (uint256) {
-        return refFee;
-    }
-
-    function updateReferralFee(uint256 _fee) public returns (uint256) {
-        refFee = _fee;
-
-        return _fee;
-    }
-
     function liquidityFee() public pure returns (uint256) {
         return lpFee;
     }
@@ -237,15 +211,7 @@ contract PumpFun is ReentrancyGuard {
         return tokens;
     }
 
-    function getUserReferrals() public view returns (address[] memory) {
-        require(checkIfProfileExists(msg.sender), "User Profile dose not exist.");
-        
-        Profile memory _profile = profile[msg.sender];
-
-        return _profile.referrals;
-    }
-
-    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx, address ref) public payable nonReentrant returns (address, address, uint) {
+    function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
         ERC20 _token = new ERC20(_name, _ticker, _supply, maxTx);
@@ -288,52 +254,19 @@ contract PumpFun is ReentrancyGuard {
         if(exists) {
             Profile storage _profile = profile[msg.sender];
 
-            if(_profile.referree == address(0)) {
-                (bool os, ) = payable(_feeTo).call{value: value}("");
-                require(os);
-            } else {
-                Profile storage profile_ = profile[_profile.referree];
-
-                profile_.referrals.push(msg.sender);
-
-                uint256 refAmount = (refFee * value) / 100;
-                uint256 amount = value - refAmount;
-
-                (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
-                require(os);
-
-                (bool os1, ) = payable(_feeTo).call{value: amount}("");
-                require(os1);
-            }
-
             _profile.tokens.push(token_);
         } else {
-            bool created = createUserProfile(msg.sender, ref);
+            bool created = createUserProfile(msg.sender);
 
             if(created) {
                 Profile storage _profile = profile[msg.sender];
 
-                if(_profile.referree == address(0)) {
-                    (bool os, ) = payable(_feeTo).call{value: value}("");
-                    require(os);
-                } else {
-                    Profile storage profile_ = profile[_profile.referree];
-
-                    profile_.referrals.push(msg.sender);
-
-                    uint256 refAmount = (refFee * value) / 100;
-                    uint256 amount = value - refAmount;
-
-                    (bool os, ) = payable(_profile.referree).call{value: refAmount}("");
-                    require(os);
-
-                    (bool os1, ) = payable(_feeTo).call{value: amount}("");
-                    require(os1);
-                }
-
                 _profile.tokens.push(token_);
             }
         }
+
+        (bool os, ) = payable(_feeTo).call{value: value}("");
+        require(os);
 
         uint n = tokens.length;
 
