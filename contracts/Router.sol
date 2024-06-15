@@ -156,6 +156,7 @@ contract Router is ReentrancyGuard {
     function swapTokensForETH(uint256 amountIn, address token, address to, address referree) public nonReentrant returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
+        require(referree != address(0), "Zero addresses are not allowed.");
 
         Factory factory_ = Factory(_factory);
 
@@ -202,6 +203,7 @@ contract Router is ReentrancyGuard {
     function swapETHForTokens(address token, address to, address referree) public payable nonReentrant returns (uint256, uint256) {
         require(token != address(0), "Zero addresses are not allowed.");
         require(to != address(0), "Zero addresses are not allowed.");
+        require(referree != address(0), "Zero addresses are not allowed.");
 
         uint256 amountIn = msg.value;
 

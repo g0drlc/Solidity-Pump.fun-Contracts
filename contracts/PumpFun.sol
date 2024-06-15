@@ -70,9 +70,7 @@ contract PumpFun is ReentrancyGuard {
         address creator;
         address token;
         address pair;
-        string name;
-        string ticker;
-        uint256 supply;
+        Data data;
         string description;
         string image;
         string twitter;
@@ -83,6 +81,19 @@ contract PumpFun is ReentrancyGuard {
         bool tradingOnUniswap;
     }
 
+    struct Data {
+        address token;
+        string name;
+        string ticker;
+        uint256 supply;
+        uint256 price;
+        uint256 marketCap;
+        uint256 liquidity;
+        uint256 _liquidity;
+        uint256 volume24H;
+        int256 priceChange24H;
+    }
+
     mapping (address => Profile) public profile;
 
     Profile[] public profiles;
@@ -90,6 +101,8 @@ contract PumpFun is ReentrancyGuard {
     mapping (address => Token) public token;
 
     Token[] public tokens;
+
+    Data[] internal data;
 
     event Launched(address indexed token, address indexed pair, uint);
 
@@ -211,6 +224,16 @@ contract PumpFun is ReentrancyGuard {
         return tokens;
     }
 
+    function getTokensData() public view returns (Data[] memory) {
+        return data;
+    }
+
+    function getTokenData(address tk) public view returns (Data memory) {
+        require(tk != address(0), "Zero addresses are not allowed.");
+
+        return token[tk].data;
+    }
+
     function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
@@ -220,21 +243,36 @@ contract PumpFun is ReentrancyGuard {
 
         address _pair = factory.createPair(address(_token), weth);
 
-        bool approved = _approval(address(router), address(_token), _supply * 10 ** _token.decimals());
+        Pair pair_ = Pair(payable(_pair));
+
+        uint256 supply = _supply * 10 ** _token.decimals();
+
+        bool approved = _approval(address(router), address(_token), supply);
         require(approved);
 
         uint256 liquidity = (lpFee * msg.value) / 100;
         uint256 value = msg.value - liquidity;
 
-        router.addLiquidityETH{value: liquidity}(address(_token), _supply * 10 ** _token.decimals());
+        router.addLiquidityETH{value: liquidity}(address(_token), supply);
+
+        Data memory _data = Data({
+            token: address(_token),
+            name: _name,
+            ticker: _ticker,
+            supply: supply,
+            price: supply / pair_.MINIMUM_LIQUIDITY(),
+            marketCap: pair_.MINIMUM_LIQUIDITY(),
+            liquidity: liquidity * 2,
+            _liquidity: pair_.MINIMUM_LIQUIDITY() * 2,
+            volume24H: 0,
+            priceChange24H: 0
+        });
 
         Token memory token_ = Token({
             creator: msg.sender,
             token: address(_token),
             pair: _pair,
-            name: _name,
-            ticker: _ticker,
-            supply: _supply,
+            data: _data,
             description: desc,
             image: img,
             twitter: urls[0],
@@ -275,6 +313,96 @@ contract PumpFun is ReentrancyGuard {
         return (address(_token), _pair, n);
     }
 
+    function swapTokensForETH(uint256 amountIn, address tk, address to, address referree) public returns (bool) {
+        require(tk != address(0), "Zero addresses are not allowed.");
+        require(to != address(0), "Zero addresses are not allowed.");
+        require(referree != address(0), "Zero addresses are not allowed.");
+
+        address _pair = factory.getPair(tk, router.WETH());
+
+        Pair pair = Pair(payable(_pair));
+
+        (uint256 reserveA, uint256 reserveB , uint256 _reserveB) = pair.getReserves();
+
+        (uint256 amount0In, uint256 amount1Out) = router.swapTokensForETH(amountIn, tk, to, referree);
+
+        uint256 newReserveA = reserveA + amount0In;
+        uint256 newReserveB = reserveB - amount1Out;
+        uint256 _newReserveB = _reserveB - amount1Out;
+
+        uint256 _liquidity = _newReserveB * 2;
+        uint256 liquidity = newReserveB * 2;
+        uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
+        uint256 price = newReserveA / _newReserveB;
+        uint256 volume = token[tk].data.volume24H + amount1Out;
+        int256 priceChange = (int256(price - token[tk].data.price) / int256(token[tk].data.price)) * 100;
+
+        token[tk].data.price = price;
+        token[tk].data.marketCap = mCap;
+        token[tk].data.liquidity = liquidity;
+        token[tk].data._liquidity = _liquidity;
+        token[tk].data.volume24H = volume;
+        token[tk].data.priceChange24H = priceChange;
+
+        for (uint i = 0; i < data.length; i++) {
+            if(data[i].token == tk) {
+                data[i].price = price;
+                data[i].marketCap = mCap;
+                data[i].liquidity = liquidity;
+                data[i]._liquidity = _liquidity;
+                data[i].volume24H = volume;
+                data[i].priceChange24H = priceChange;
+            }
+        }
+
+        return true;
+    }
+
+    function swapETHForTokens(address tk, address to, address referree) public payable returns (bool) {
+        require(tk != address(0), "Zero addresses are not allowed.");
+        require(to != address(0), "Zero addresses are not allowed.");
+        require(referree != address(0), "Zero addresses are not allowed.");
+
+        address _pair = factory.getPair(tk, router.WETH());
+
+        Pair pair = Pair(payable(_pair));
+
+        (uint256 reserveA, uint256 reserveB , uint256 _reserveB) = pair.getReserves();
+
+        (uint256 amount1In, uint256 amount0Out) = router.swapETHForTokens{value: msg.value}(tk, to, referree);
+
+        uint256 newReserveA = reserveA - amount0Out;
+        uint256 newReserveB = reserveB + amount1In;
+        uint256 _newReserveB = _reserveB + amount1In;
+
+        uint256 _liquidity = _newReserveB * 2;
+        uint256 liquidity = newReserveB * 2;
+        uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
+        uint256 price = newReserveA / _newReserveB;
+        uint256 volume = token[tk].data.volume24H + amount1In;
+        int256 priceChange = (int256(price - token[tk].data.price) / int256(token[tk].data.price)) * 100;
+
+        token[tk].data.price = price;
+        token[tk].data.marketCap = mCap;
+        token[tk].data.liquidity = liquidity;
+        token[tk].data._liquidity = _liquidity;
+        token[tk].data.volume24H = volume;
+        token[tk].data.priceChange24H = priceChange;
+
+        for (uint i = 0; i < data.length; i++) {
+            if(data[i].token == tk) {
+                data[i].price = price;
+                data[i].marketCap = mCap;
+                data[i].liquidity = liquidity;
+                data[i]._liquidity = _liquidity;
+                data[i].volume24H = volume;
+                data[i].priceChange24H = priceChange;
+            }
+        }
+
+        return true;
+    }
+
     function deploy(address tk) public onlyOwner nonReentrant {
         require(tk != address(0), "Zero addresses are not allowed.");
 
@@ -289,6 +417,27 @@ contract PumpFun is ReentrancyGuard {
         Token storage _token = token[tk];
 
         (uint256 amount0, uint256 amount1) = router.removeLiquidityETH(tk, 100, address(this));
+
+        Data memory _data = Data({
+            token: tk,
+            name: token[tk].data.name,
+            ticker: token[tk].data.ticker,
+            supply: token[tk].data.supply,
+            price: 0,
+            marketCap: 0,
+            liquidity: 0,
+            _liquidity: 0,
+            volume24H: 0,
+            priceChange24H: 0
+        });
+
+        _token.data = _data;
+
+        for (uint i = 0; i < data.length; i++) {
+            if(data[i].token == tk) {
+                data[i] = _data;
+            }
+        }
 
         openTradingOnUniswap(tk);
 
