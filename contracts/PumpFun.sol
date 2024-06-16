@@ -102,8 +102,6 @@ contract PumpFun is ReentrancyGuard {
 
     Token[] public tokens;
 
-    Data[] internal data;
-
     event Launched(address indexed token, address indexed pair, uint);
 
     event Deployed(address indexed token, uint256 amount0, uint256 amount1);
@@ -224,16 +222,6 @@ contract PumpFun is ReentrancyGuard {
         return tokens;
     }
 
-    function getTokensData() public view returns (Data[] memory) {
-        return data;
-    }
-
-    function getTokenData(address tk) public view returns (Data memory) {
-        require(tk != address(0), "Zero addresses are not allowed.");
-
-        return token[tk].data;
-    }
-
     function launch(string memory _name, string memory _ticker, string memory desc, string memory img, string[4] memory urls, uint256 _supply, uint maxTx) public payable nonReentrant returns (address, address, uint) {
         require(msg.value >= fee, "Insufficient amount sent.");
 
@@ -344,17 +332,6 @@ contract PumpFun is ReentrancyGuard {
         token[tk].data.volume24H = volume;
         token[tk].data.priceChange24H = priceChange;
 
-        for (uint i = 0; i < data.length; i++) {
-            if(data[i].token == tk) {
-                data[i].price = price;
-                data[i].marketCap = mCap;
-                data[i].liquidity = liquidity;
-                data[i]._liquidity = _liquidity;
-                data[i].volume24H = volume;
-                data[i].priceChange24H = priceChange;
-            }
-        }
-
         return true;
     }
 
@@ -389,17 +366,6 @@ contract PumpFun is ReentrancyGuard {
         token[tk].data.volume24H = volume;
         token[tk].data.priceChange24H = priceChange;
 
-        for (uint i = 0; i < data.length; i++) {
-            if(data[i].token == tk) {
-                data[i].price = price;
-                data[i].marketCap = mCap;
-                data[i].liquidity = liquidity;
-                data[i]._liquidity = _liquidity;
-                data[i].volume24H = volume;
-                data[i].priceChange24H = priceChange;
-            }
-        }
-
         return true;
     }
 
@@ -432,12 +398,6 @@ contract PumpFun is ReentrancyGuard {
         });
 
         _token.data = _data;
-
-        for (uint i = 0; i < data.length; i++) {
-            if(data[i].token == tk) {
-                data[i] = _data;
-            }
-        }
 
         openTradingOnUniswap(tk);
 

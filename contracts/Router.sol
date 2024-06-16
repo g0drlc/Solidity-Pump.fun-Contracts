@@ -241,7 +241,7 @@ contract Router is ReentrancyGuard {
         bool os1 = transferETH(pair, amount);
         require(os1, "Transfer of ETH failed.");
 
-        bool os2 = transferETH(feeTo, _amount);
+        bool os2 = transferETH(feeTo, txFee);
         require(os2, "Transfer of ETH failed.");
 
         bool os3 = token_.transferFrom(pair, to, amountOut);
