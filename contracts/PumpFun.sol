@@ -256,7 +256,7 @@ contract PumpFun is ReentrancyGuard {
             _liquidity: pair_.MINIMUM_LIQUIDITY() * 2,
             volume: 0,
             volume24H: 0,
-            prevPrice: 0,
+            prevPrice: supply / pair_.MINIMUM_LIQUIDITY(),
             lastUpdated: block.timestamp
         });
 
