@@ -90,8 +90,10 @@ contract PumpFun is ReentrancyGuard {
         uint256 marketCap;
         uint256 liquidity;
         uint256 _liquidity;
+        uint256 volume;
         uint256 volume24H;
-        int256 priceChange24H;
+        uint256 prevPrice;
+        uint256 lastUpdated;
     }
 
     mapping (address => Profile) public profile;
@@ -252,8 +254,10 @@ contract PumpFun is ReentrancyGuard {
             marketCap: pair_.MINIMUM_LIQUIDITY(),
             liquidity: liquidity * 2,
             _liquidity: pair_.MINIMUM_LIQUIDITY() * 2,
+            volume: 0,
             volume24H: 0,
-            priceChange24H: 0
+            prevPrice: 0,
+            lastUpdated: block.timestamp
         });
 
         Token memory token_ = Token({
@@ -317,20 +321,42 @@ contract PumpFun is ReentrancyGuard {
         uint256 newReserveA = reserveA + amount0In;
         uint256 newReserveB = reserveB - amount1Out;
         uint256 _newReserveB = _reserveB - amount1Out;
+        uint256 duration = block.timestamp - token[tk].data.lastUpdated;
 
         uint256 _liquidity = _newReserveB * 2;
         uint256 liquidity = newReserveB * 2;
         uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
         uint256 price = newReserveA / _newReserveB;
-        uint256 volume = token[tk].data.volume24H + amount1Out;
-        int256 priceChange = (int256(price - token[tk].data.price) / int256(token[tk].data.price)) * 100;
+        uint256 volume = duration > 86400 ? amount1Out : token[tk].data.volume24H + amount1Out;
+        uint256 _price = token[tk].data.price;
 
         token[tk].data.price = price;
         token[tk].data.marketCap = mCap;
         token[tk].data.liquidity = liquidity;
         token[tk].data._liquidity = _liquidity;
+        token[tk].data.volume = token[tk].data.volume + amount1Out;
         token[tk].data.volume24H = volume;
-        token[tk].data.priceChange24H = priceChange;
+        token[tk].data.prevPrice = _price;
+        
+        if(duration > 86400) {
+            token[tk].data.lastUpdated = block.timestamp;
+        }
+
+        for (uint i = 0; i < tokens.length; i++) {
+            if(tokens[i].token == tk) {
+                tokens[i].data.price = price;
+                tokens[i].data.marketCap = mCap;
+                tokens[i].data.liquidity = liquidity;
+                tokens[i].data._liquidity = _liquidity;
+                tokens[i].data.volume = token[tk].data.volume + amount1Out;
+                tokens[i].data.volume24H = volume;
+                tokens[i].data.prevPrice = _price;
+
+                if(duration > 86400) {
+                    tokens[i].data.lastUpdated = block.timestamp;
+                }
+            }
+        }
 
         return true;
     }
@@ -351,20 +377,42 @@ contract PumpFun is ReentrancyGuard {
         uint256 newReserveA = reserveA - amount0Out;
         uint256 newReserveB = reserveB + amount1In;
         uint256 _newReserveB = _reserveB + amount1In;
+        uint256 duration = block.timestamp - token[tk].data.lastUpdated;
 
         uint256 _liquidity = _newReserveB * 2;
         uint256 liquidity = newReserveB * 2;
         uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
         uint256 price = newReserveA / _newReserveB;
-        uint256 volume = token[tk].data.volume24H + amount1In;
-        int256 priceChange = (int256(price - token[tk].data.price) / int256(token[tk].data.price)) * 100;
+        uint256 volume = duration > 86400 ? amount1In : token[tk].data.volume24H + amount1In;
+        uint256 _price = token[tk].data.price;
 
         token[tk].data.price = price;
         token[tk].data.marketCap = mCap;
         token[tk].data.liquidity = liquidity;
         token[tk].data._liquidity = _liquidity;
+        token[tk].data.volume = token[tk].data.volume + amount1In;
         token[tk].data.volume24H = volume;
-        token[tk].data.priceChange24H = priceChange;
+        token[tk].data.prevPrice = _price;
+        
+        if(duration > 86400) {
+            token[tk].data.lastUpdated = block.timestamp;
+        }
+
+        for (uint i = 0; i < tokens.length; i++) {
+            if(tokens[i].token == tk) {
+                tokens[i].data.price = price;
+                tokens[i].data.marketCap = mCap;
+                tokens[i].data.liquidity = liquidity;
+                tokens[i].data._liquidity = _liquidity;
+                tokens[i].data.volume = token[tk].data.volume + amount1In;
+                tokens[i].data.volume24H = volume;
+                tokens[i].data.prevPrice = _price;
+
+                if(duration > 86400) {
+                    tokens[i].data.lastUpdated = block.timestamp;
+                }
+            }
+        }
 
         return true;
     }
@@ -393,8 +441,10 @@ contract PumpFun is ReentrancyGuard {
             marketCap: 0,
             liquidity: 0,
             _liquidity: 0,
+            volume: 0,
             volume24H: 0,
-            priceChange24H: 0
+            prevPrice: 0,
+            lastUpdated: block.timestamp
         });
 
         _token.data = _data;

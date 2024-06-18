@@ -221,19 +221,19 @@ contract Router is ReentrancyGuard {
         require(approved, "Not Approved.");
 
         uint fee = factory_.txFee();
-        uint256 txFee = (fee * amountOut) / 100;
+        uint256 txFee = (fee * amountIn) / 100;
 
         uint256 _amount;
         uint256 amount;
 
         if(referree != address(0)) {
-            _amount = (referralFee * amountOut) / 100;
-            amount = amountOut - (txFee + _amount);
+            _amount = (referralFee * amountIn) / 100;
+            amount = amountIn - (txFee + _amount);
 
             bool os = _pair.transferETH(referree, _amount);
             require(os, "Transfer of ETH failed.");
         } else {
-            amount = amountOut - txFee;
+            amount = amountIn - txFee;
         }
 
         address feeTo = factory_.feeTo();
