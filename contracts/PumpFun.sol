@@ -449,6 +449,12 @@ contract PumpFun is ReentrancyGuard {
 
         _token.data = _data;
 
+        for (uint i = 0; i < tokens.length; i++) {
+            if(tokens[i].token == tk) {
+                tokens[i].data = _data;
+            }
+        }
+
         openTradingOnUniswap(tk);
 
         _token.trading = false;
@@ -481,12 +487,5 @@ contract PumpFun is ReentrancyGuard {
         );
 
         ERC20(uniswapV2Pair).approve(address(uniswapV2Router), type(uint).max);
-    }
-
-    function withdraw() public returns (bool) {
-        (bool os, ) = payable(owner).call{value: address(this).balance}("");
-        require(os, "Transfer ETH Failed.");
-
-        return os;
     }
 }
