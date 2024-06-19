@@ -42,7 +42,6 @@ contract Router is ReentrancyGuard {
         require(_address != address(0), "Zero addresses are not allowed.");
 
         (bool os, ) = payable(_address).call{value: amount}("");
-        require(os, "Transfer ETH Failed.");
 
         return os;
     }
@@ -97,10 +96,10 @@ contract Router is ReentrancyGuard {
         ERC20 token_ = ERC20(token);
 
         bool os = transferETH(pair, amountETH);
-        require(os, "Transfer of ETH failed.");
+        require(os, "Transfer of ETH to pair failed.");
 
         bool os1 = token_.transferFrom(msg.sender, pair, amountToken);
-        require(os1, "Transfer of token failed.");
+        require(os1, "Transfer of token to pair failed.");
         
         _pair.mint(amountToken, amountETH, msg.sender);
 
@@ -137,10 +136,10 @@ contract Router is ReentrancyGuard {
         require(approved);
 
         bool os = _pair.transferETH(to, amountETH);
-        require(os, "Transfer of ETH failed.");
+        require(os, "Transfer of ETH to caller failed.");
 
         bool os1 = token_.transferFrom(pair, to, amountToken);
-        require(os1, "Transfer of token failed.");
+        require(os1, "Transfer of token to caller failed.");
         
         _pair.burn(amountToken, amountETH, msg.sender);
 
@@ -169,7 +168,7 @@ contract Router is ReentrancyGuard {
         uint256 amountOut = _getAmountsOut(token, address(0), amountIn);
 
         bool os = token_.transferFrom(to, pair, amountIn);
-        require(os, "Transfer of token failed");
+        require(os, "Transfer of token to pair failed");
 
         uint fee = factory_.txFee();
         uint256 txFee = (fee * amountOut) / 100;
@@ -182,7 +181,7 @@ contract Router is ReentrancyGuard {
             amount = amountOut - (txFee + _amount);
 
             bool os1 = _pair.transferETH(referree, _amount);
-            require(os1, "Transfer of ETH failed.");
+            require(os1, "Transfer of ETH to referree failed.");
         } else {
             amount = amountOut - txFee;
         }
@@ -190,10 +189,10 @@ contract Router is ReentrancyGuard {
         address feeTo = factory_.feeTo();
 
         bool os2 = _pair.transferETH(to, amount);
-        require(os2, "Transfer of ETH failed.");
+        require(os2, "Transfer of ETH to user failed.");
 
         bool os3 = _pair.transferETH(feeTo, txFee);
-        require(os3, "Transfer of ETH failed.");
+        require(os3, "Transfer of ETH to fee address failed.");
 
         _pair.swap(amountIn, 0, 0, amount);
 
@@ -230,8 +229,8 @@ contract Router is ReentrancyGuard {
             _amount = (referralFee * amountIn) / 100;
             amount = amountIn - (txFee + _amount);
 
-            bool os = _pair.transferETH(referree, _amount);
-            require(os, "Transfer of ETH failed.");
+            bool os = transferETH(referree, _amount);
+            require(os, "Transfer of ETH to referree failed.");
         } else {
             amount = amountIn - txFee;
         }
@@ -239,13 +238,13 @@ contract Router is ReentrancyGuard {
         address feeTo = factory_.feeTo();
 
         bool os1 = transferETH(pair, amount);
-        require(os1, "Transfer of ETH failed.");
+        require(os1, "Transfer of ETH to pair failed.");
 
         bool os2 = transferETH(feeTo, txFee);
-        require(os2, "Transfer of ETH failed.");
+        require(os2, "Transfer of ETH to fee address failed.");
 
         bool os3 = token_.transferFrom(pair, to, amountOut);
-        require(os3, "Transfer of token failed.");
+        require(os3, "Transfer of token to pair failed.");
     
         _pair.swap(0, amountOut, amount, 0);
 

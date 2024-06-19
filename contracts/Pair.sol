@@ -121,7 +121,6 @@ contract Pair is ReentrancyGuard {
         require(_address != address(0), "Zero addresses are not allowed.");
 
         (bool os, ) = payable(_address).call{value: amount}("");
-        require(os, "Transfer ETH Failed.");
 
         return os;
     }

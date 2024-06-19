@@ -328,7 +328,7 @@ contract PumpFun is ReentrancyGuard {
         uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
         uint256 price = newReserveA / _newReserveB;
         uint256 volume = duration > 86400 ? amount1Out : token[tk].data.volume24H + amount1Out;
-        uint256 _price = token[tk].data.price;
+        uint256 _price = duration > 86400 ? token[tk].data.price : token[tk].data.prevPrice;
 
         token[tk].data.price = price;
         token[tk].data.marketCap = mCap;
@@ -384,7 +384,7 @@ contract PumpFun is ReentrancyGuard {
         uint256 mCap = (token[tk].data.supply * _newReserveB) / newReserveA;
         uint256 price = newReserveA / _newReserveB;
         uint256 volume = duration > 86400 ? amount1In : token[tk].data.volume24H + amount1In;
-        uint256 _price = token[tk].data.price;
+        uint256 _price = duration > 86400 ? token[tk].data.price : token[tk].data.prevPrice;
 
         token[tk].data.price = price;
         token[tk].data.marketCap = mCap;
